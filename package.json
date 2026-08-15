@@ -11,7 +11,7 @@
     "setup": "node scripts/setup.js",
     "download-binaries": "node scripts/download-binaries.js",
     "doctor": "node scripts/doctor.js",
-    "test": "node tests/test-server.js"
+    "test": "node tests/audit-all-tools.js"
   },
   "repository": {
     "type": "git",

@@ -13,11 +13,11 @@ const filesystemTools = [
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Ruta absoluta o relativa del archivo.' },
+        filePath: { type: 'string', description: 'Alias para path.' },
         startLine: { type: 'number', description: 'Línea de inicio 1-indexada (opcional).' },
         endLine: { type: 'number', description: 'Línea de fin 1-indexada (opcional).' },
         showLineNumbers: { type: 'boolean', description: 'Si es true, numera cada línea como 1: ..., 2: ...' },
       },
-      required: ['path'],
     },
   },
   {
@@ -27,9 +27,10 @@ const filesystemTools = [
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Ruta del archivo a guardar.' },
+        filePath: { type: 'string', description: 'Alias para path.' },
         content: { type: 'string', description: 'Contenido completo en texto.' },
       },
-      required: ['path', 'content'],
+      required: ['content'],
     },
   },
   {
@@ -39,10 +40,12 @@ const filesystemTools = [
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Ruta del archivo a editar.' },
+        filePath: { type: 'string', description: 'Alias para path.' },
         targetText: { type: 'string', description: 'El texto o bloque exacto que se desea reemplazar.' },
+        targetContent: { type: 'string', description: 'Alias para targetText.' },
         replacementText: { type: 'string', description: 'El nuevo texto que sustituirá a targetText.' },
+        replacementContent: { type: 'string', description: 'Alias para replacementText.' },
       },
-      required: ['path', 'targetText', 'replacementText'],
     },
   },
   {
@@ -52,10 +55,10 @@ const filesystemTools = [
       type: 'object',
       properties: {
         directory: { type: 'string', description: 'Directorio base de búsqueda (por defecto el directorio de trabajo).' },
+        searchDir: { type: 'string', description: 'Alias para directory.' },
         pattern: { type: 'string', description: 'Patrón glob a buscar (ej. **/*.py, **/*.md).' },
         maxResults: { type: 'number', description: 'Límite de resultados (por defecto 100).' },
       },
-      required: ['pattern'],
     },
   },
   {
@@ -65,6 +68,7 @@ const filesystemTools = [
       type: 'object',
       properties: {
         directory: { type: 'string', description: 'Directorio donde buscar.' },
+        searchDir: { type: 'string', description: 'Alias para directory.' },
         query: { type: 'string', description: 'Texto o patrón a buscar dentro del código.' },
         isRegex: { type: 'boolean', description: 'Si es true, interpreta query como expresión regular.' },
         filePattern: { type: 'string', description: 'Filtro opcional de extensiones (ej. *.js o *.py).' },
@@ -80,6 +84,7 @@ const filesystemTools = [
       type: 'object',
       properties: {
         directory: { type: 'string', description: 'Carpeta a explorar (por defecto el directorio de trabajo).' },
+        dirPath: { type: 'string', description: 'Alias para directory.' },
         maxDepth: { type: 'number', description: 'Profundidad máxima del árbol (por defecto 3 niveles).' },
       },
     },
@@ -131,7 +136,10 @@ function generateTree(dirPath, maxDepth, currentDepth = 0, prefix = '') {
 async function handleFilesystemTool(name, args) {
   switch (name) {
     case 'read_file': {
-      const targetPath = path.resolve(args.path);
+      const rawPath = args.path || args.filePath || args.targetPath || args.file;
+      if (!rawPath) return formatTextResponse('Error: Debes proporcionar un path o filePath para leer.', true);
+
+      const targetPath = path.resolve(rawPath);
       if (!fs.existsSync(targetPath)) {
         return formatTextResponse(`Error: El archivo no existe en la ruta '${targetPath}'`, true);
       }
@@ -162,37 +170,50 @@ async function handleFilesystemTool(name, args) {
     }
 
     case 'write_file': {
-      const targetPath = path.resolve(args.path);
+      const rawPath = args.path || args.filePath || args.targetPath || args.file;
+      if (!rawPath) return formatTextResponse('Error: Debes proporcionar un path o filePath para escribir.', true);
+
+      const targetPath = path.resolve(rawPath);
       const dir = path.dirname(targetPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
 
-      fs.writeFileSync(targetPath, args.content, 'utf-8');
+      fs.writeFileSync(targetPath, args.content || '', 'utf-8');
       const stat = fs.statSync(targetPath);
       return formatTextResponse(`Archivo guardado con éxito en: ${targetPath} (${stat.size} bytes escritos).`);
     }
 
     case 'edit_file_replace': {
-      const targetPath = path.resolve(args.path);
+      const rawPath = args.path || args.filePath || args.targetPath || args.file;
+      if (!rawPath) return formatTextResponse('Error: Debes proporcionar un path o filePath para editar.', true);
+
+      const targetPath = path.resolve(rawPath);
       if (!fs.existsSync(targetPath)) {
         return formatTextResponse(`Error: El archivo '${targetPath}' no existe.`, true);
       }
 
+      const targetText = args.targetText !== undefined ? args.targetText : args.targetContent;
+      const replacementText = args.replacementText !== undefined ? args.replacementText : args.replacementContent;
+
+      if (targetText === undefined || replacementText === undefined) {
+        return formatTextResponse('Error: Debes especificar targetText (o targetContent) y replacementText (o replacementContent).', true);
+      }
+
       const original = fs.readFileSync(targetPath, 'utf-8');
-      if (!original.includes(args.targetText)) {
+      if (!original.includes(targetText)) {
         return formatTextResponse(`Error: No se encontró el texto buscado dentro del archivo '${targetPath}'. Asegúrate de que los espacios y líneas coinciden exactamente.`, true);
       }
 
-      // Reemplazar la primera ocurrencia de forma precisa
-      const modified = original.replace(args.targetText, args.replacementText);
+      const modified = original.replace(targetText, replacementText);
       fs.writeFileSync(targetPath, modified, 'utf-8');
 
       return formatTextResponse(`Edición completada con éxito en '${targetPath}'. Se ha reemplazado el bloque especificado.`);
     }
 
     case 'search_files': {
-      const baseDir = args.directory ? path.resolve(args.directory) : config.workspaceDir;
+      const rawDir = args.directory || args.searchDir || args.dirPath || config.workspaceDir;
+      const baseDir = path.resolve(rawDir);
       const pattern = args.pattern || '**/*';
       const maxResults = args.maxResults || 100;
 
@@ -205,128 +226,131 @@ async function handleFilesystemTool(name, args) {
         });
 
         const limited = matches.slice(0, maxResults);
-        return formatTextResponse({
+        const result = {
           baseDirectory: baseDir,
           pattern: pattern,
-          totalMatchesFound: matches.length,
+          totalMatches: matches.length,
           returnedMatches: limited.length,
           files: limited,
-        });
+        };
+
+        return formatTextResponse(result);
       } catch (err) {
-        return formatTextResponse(`Error en búsqueda de archivos: ${err.message}`, true);
+        return formatTextResponse(`Error buscando archivos: ${err.message}`, true);
       }
     }
 
     case 'grep_in_files': {
-      const baseDir = args.directory ? path.resolve(args.directory) : config.workspaceDir;
-      const filePattern = args.filePattern || '**/*.*';
+      const rawDir = args.directory || args.searchDir || args.dirPath || config.workspaceDir;
+      const baseDir = path.resolve(rawDir);
       const query = args.query;
       const isRegex = args.isRegex || false;
+      const filePattern = args.filePattern || '**/*';
       const maxMatches = args.maxMatches || 100;
-
-      let regex;
-      try {
-        regex = isRegex ? new RegExp(query, 'i') : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      } catch (e) {
-        return formatTextResponse(`Error en la expresión regular: ${e.message}`, true);
-      }
 
       try {
         const files = await glob(filePattern, {
           cwd: baseDir,
           nodir: true,
-          ignore: ['**/node_modules/**', '**/.git/**', '**/.next/**', '**/*.exe', '**/*.png', '**/*.jpg', '**/*.zip'],
+          ignore: ['**/node_modules/**', '**/.git/**', '**/.next/**', '**/*.png', '**/*.jpg', '**/*.exe', '**/*.zip'],
         });
 
         const results = [];
-        for (const relFile of files) {
-          if (results.length >= maxMatches) break;
-          const fullPath = path.join(baseDir, relFile);
+        let totalCount = 0;
+        let regex = null;
+
+        if (isRegex) {
+          regex = new RegExp(query, 'i');
+        }
+
+        for (const file of files) {
+          if (totalCount >= maxMatches) break;
+          const fullPath = path.join(baseDir, file);
+
           try {
             const content = fs.readFileSync(fullPath, 'utf-8');
             const lines = content.split(/\r?\n/);
-            lines.forEach((line, idx) => {
-              if (results.length < maxMatches && regex.test(line)) {
+
+            lines.forEach((line, index) => {
+              if (totalCount >= maxMatches) return;
+
+              let match = false;
+              if (isRegex && regex) {
+                match = regex.test(line);
+              } else {
+                match = line.toLowerCase().includes(query.toLowerCase());
+              }
+
+              if (match) {
                 results.push({
-                  file: relFile,
-                  lineNumber: idx + 1,
-                  lineContent: line.trim(),
+                  file: file,
+                  line: index + 1,
+                  text: line.trim(),
                 });
+                totalCount++;
               }
             });
-          } catch (e) {
-            // Archivo binario o no legible, omitir
-          }
+          } catch (e) {}
         }
 
         return formatTextResponse({
-          baseDirectory: baseDir,
           query: query,
-          totalMatches: results.length,
+          isRegex: isRegex,
+          totalMatchesFound: totalCount,
           matches: results,
         });
       } catch (err) {
-        return formatTextResponse(`Error ejecutando grep: ${err.message}`, true);
+        return formatTextResponse(`Error en grep_in_files: ${err.message}`, true);
       }
     }
 
     case 'get_directory_tree': {
-      const targetDir = args.directory ? path.resolve(args.directory) : config.workspaceDir;
-      const depth = args.maxDepth !== undefined ? args.maxDepth : 3;
+      const rawDir = args.directory || args.dirPath || config.workspaceDir;
+      const baseDir = path.resolve(rawDir);
+      const maxDepth = args.maxDepth !== undefined ? args.maxDepth : 3;
 
-      if (!fs.existsSync(targetDir)) {
-        return formatTextResponse(`Error: El directorio '${targetDir}' no existe.`, true);
+      if (!fs.existsSync(baseDir)) {
+        return formatTextResponse(`Error: Directorio no encontrado en '${baseDir}'`, true);
       }
 
-      const tree = `${targetDir}/\n` + generateTree(targetDir, depth);
+      const tree = `${path.basename(baseDir)}/\n` + generateTree(baseDir, maxDepth);
       return formatTextResponse(truncateString(tree, config.maxOutputChars));
     }
 
     case 'file_operations': {
-      const src = path.resolve(args.sourcePath);
       const op = args.operation;
+      const src = path.resolve(args.sourcePath);
 
       if (!fs.existsSync(src)) {
         return formatTextResponse(`Error: La ruta de origen '${src}' no existe.`, true);
       }
 
-      try {
-        switch (op) {
-          case 'delete': {
-            const stat = fs.statSync(src);
-            if (stat.isDirectory()) {
-              fs.rmSync(src, { recursive: true, force: true });
-            } else {
-              fs.unlinkSync(src);
-            }
-            return formatTextResponse(`'${src}' eliminado con éxito.`);
-          }
-
-          case 'copy': {
-            if (!args.destinationPath) return formatTextResponse('destinationPath es obligatorio para copy', true);
-            const dst = path.resolve(args.destinationPath);
-            const dstDir = path.dirname(dst);
-            if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
-            fs.cpSync(src, dst, { recursive: true });
-            return formatTextResponse(`Copiado con éxito de '${src}' a '${dst}'.`);
-          }
-
-          case 'move':
-          case 'rename': {
-            if (!args.destinationPath) return formatTextResponse('destinationPath es obligatorio para move/rename', true);
-            const dst = path.resolve(args.destinationPath);
-            const dstDir = path.dirname(dst);
-            if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
-            fs.renameSync(src, dst);
-            return formatTextResponse(`Movido/renombrado con éxito a '${dst}'.`);
-          }
-
-          default:
-            return formatTextResponse(`Operación '${op}' no reconocida.`, true);
+      if (op === 'delete') {
+        const stat = fs.statSync(src);
+        if (stat.isDirectory()) {
+          fs.rmSync(src, { recursive: true, force: true });
+        } else {
+          fs.unlinkSync(src);
         }
-      } catch (err) {
-        return formatTextResponse(`Error en operación de archivo: ${err.message}`, true);
+        return formatTextResponse(`Eliminado con éxito: '${src}'`);
       }
+
+      if (!args.destinationPath) {
+        return formatTextResponse(`Error: destinationPath es obligatorio para la operación '${op}'.`, true);
+      }
+      const dest = path.resolve(args.destinationPath);
+      const destDir = path.dirname(dest);
+      if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+
+      if (op === 'copy') {
+        fs.cpSync(src, dest, { recursive: true });
+        return formatTextResponse(`Copiado con éxito de '${src}' a '${dest}'.`);
+      } else if (op === 'move' || op === 'rename') {
+        fs.renameSync(src, dest);
+        return formatTextResponse(`Movido/Renombrado con éxito a '${dest}'.`);
+      }
+
+      return formatTextResponse(`Operación '${op}' no reconocida.`, true);
     }
 
     default:

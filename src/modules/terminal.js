@@ -10,10 +10,23 @@ const logger = require('../utils/logger');
 const backgroundTasks = new Map();
 let nextTaskId = 1;
 
+function getEnhancedEnv() {
+  const nodeDir = path.dirname(process.execPath);
+  const currentPath = process.env.PATH || process.env.Path || '';
+  const enhancedPath = nodeDir ? `${nodeDir}${path.delimiter}${currentPath}` : currentPath;
+
+  const env = { ...process.env };
+  env.PATH = enhancedPath;
+  if (isWindows) {
+    env.Path = enhancedPath;
+  }
+  return env;
+}
+
 const terminalTools = [
   {
     name: 'run_command',
-    description: 'Ejecuta un comando en la terminal (PowerShell en Windows, Bash en Unix) con captura de stdout, stderr, código de salida y tiempo de ejecución.',
+    description: 'Ejecuta un comando en la terminal (CMD/PowerShell en Windows, Bash en Unix) con captura de stdout, stderr, código de salida y tiempo de ejecución.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -31,8 +44,8 @@ const terminalTools = [
         },
         shell: {
           type: 'string',
-          enum: ['powershell', 'cmd', 'bash', 'default'],
-          description: 'Shell a utilizar (por defecto powershell en Windows, bash en Unix).',
+          enum: ['cmd', 'powershell', 'bash', 'default'],
+          description: 'Shell a utilizar (por defecto cmd en Windows, bash en Unix).',
         },
       },
       required: ['command'],
@@ -51,6 +64,10 @@ const terminalTools = [
         cwd: {
           type: 'string',
           description: 'Directorio de trabajo opcional.',
+        },
+        taskName: {
+          type: 'string',
+          description: 'Nombre descriptivo de la tarea.',
         },
       },
       required: ['command'],
@@ -98,13 +115,14 @@ const terminalTools = [
   },
   {
     name: 'get_environment_vars',
-    description: 'Inspecciona las variables de entorno del sistema o filtra por nombre.',
+    description: 'Obtiene variables de entorno del sistema con enmascaramiento automático de tokens y contraseñas sensibles.',
     inputSchema: {
       type: 'object',
       properties: {
-        filter: {
-          type: 'string',
-          description: 'Filtro opcional de texto para buscar variables específicas (ej. PATH, NODE, USER).',
+        names: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Nombres específicos de variables a consultar (ej. ["PATH", "USER", "NODE_ENV"]). Si se omite, lista las principales no sensibles.',
         },
       },
     },
@@ -114,18 +132,25 @@ const terminalTools = [
 async function handleTerminalTool(name, args) {
   switch (name) {
     case 'run_command': {
-      const cmd = args.command;
+      let cmd = args.command;
       const cwd = args.cwd ? path.resolve(args.cwd) : config.workspaceDir;
       const timeout = args.timeoutMs || config.defaultTimeoutMs;
-      let shellExec = isWindows ? 'powershell.exe' : '/bin/bash';
 
-      if (args.shell === 'cmd' && isWindows) {
-        shellExec = 'cmd.exe';
-      } else if (args.shell === 'powershell' && isWindows) {
-        shellExec = 'powershell.exe';
+      // Asegurar que el cwd existe
+      if (!fs.existsSync(cwd)) {
+        fs.mkdirSync(cwd, { recursive: true });
       }
 
+      let shellExec = isWindows ? 'cmd.exe' : '/bin/bash';
+      if (args.shell === 'powershell' && isWindows) {
+        shellExec = 'powershell.exe';
+      } else if (args.shell === 'cmd' && isWindows) {
+        shellExec = 'cmd.exe';
+      }
+
+      const enhancedEnv = getEnhancedEnv();
       const startTime = Date.now();
+
       return new Promise((resolve) => {
         exec(
           cmd,
@@ -133,7 +158,8 @@ async function handleTerminalTool(name, args) {
             shell: shellExec,
             cwd: cwd,
             timeout: timeout,
-            maxBuffer: 20 * 1024 * 1024, // 20 MB
+            maxBuffer: 20 * 1024 * 1024,
+            env: enhancedEnv,
           },
           (error, stdout, stderr) => {
             const durationMs = Date.now() - startTime;
@@ -164,134 +190,138 @@ async function handleTerminalTool(name, args) {
     case 'run_background_command': {
       const taskId = `task_${Date.now()}_${nextTaskId++}`;
       const cwd = args.cwd ? path.resolve(args.cwd) : config.workspaceDir;
-      const shellExec = isWindows ? 'powershell.exe' : '/bin/bash';
-      const shellArgs = isWindows ? ['-Command', args.command] : ['-c', args.command];
+
+      if (!fs.existsSync(cwd)) {
+        fs.mkdirSync(cwd, { recursive: true });
+      }
+
+      const isWin = isWindows;
+      const shellExec = isWin ? 'cmd.exe' : '/bin/bash';
+      const shellArgs = isWin ? ['/c', args.command] : ['-c', args.command];
 
       const child = spawn(shellExec, shellArgs, {
         cwd: cwd,
         stdio: ['ignore', 'pipe', 'pipe'],
+        env: getEnhancedEnv(),
       });
 
       const taskInfo = {
         id: taskId,
+        name: args.taskName || args.command,
         command: args.command,
         cwd: cwd,
         pid: child.pid,
         startTime: new Date().toISOString(),
-        status: 'running',
-        exitCode: null,
+        status: 'RUNNING',
         logs: [],
         process: child,
       };
 
-      child.stdout.on('data', (d) => {
-        const lines = d.toString().split(/\r?\n/).filter(Boolean);
-        taskInfo.logs.push(...lines.map((l) => `[STDOUT] ${l}`));
-        if (taskInfo.logs.length > 2000) taskInfo.logs.splice(0, taskInfo.logs.length - 2000);
+      child.stdout.on('data', (data) => {
+        const text = data.toString();
+        taskInfo.logs.push(`[${new Date().toLocaleTimeString()}] ${text}`);
+        if (taskInfo.logs.length > 500) taskInfo.logs.shift();
       });
 
-      child.stderr.on('data', (d) => {
-        const lines = d.toString().split(/\r?\n/).filter(Boolean);
-        taskInfo.logs.push(...lines.map((l) => `[STDERR] ${l}`));
-        if (taskInfo.logs.length > 2000) taskInfo.logs.splice(0, taskInfo.logs.length - 2000);
+      child.stderr.on('data', (data) => {
+        const text = data.toString();
+        taskInfo.logs.push(`[${new Date().toLocaleTimeString()}] [ERR] ${text}`);
+        if (taskInfo.logs.length > 500) taskInfo.logs.shift();
       });
 
       child.on('close', (code) => {
-        taskInfo.status = 'completed';
-        taskInfo.exitCode = code;
-      });
-
-      child.on('error', (err) => {
-        taskInfo.status = 'error';
-        taskInfo.logs.push(`[SYSTEM_ERROR] ${err.message}`);
+        taskInfo.status = `EXITED (code ${code})`;
       });
 
       backgroundTasks.set(taskId, taskInfo);
 
       return formatTextResponse({
-        message: 'Tarea en segundo plano iniciada con éxito',
+        message: 'Comando iniciado en segundo plano con éxito',
         taskId: taskId,
         pid: child.pid,
         command: args.command,
         cwd: cwd,
+        consultarLogs: `get_background_task_output(taskId="${taskId}")`,
       });
     }
 
     case 'get_background_task_output': {
       const task = backgroundTasks.get(args.taskId);
       if (!task) {
-        return formatTextResponse(`Error: No se encontró ninguna tarea activa o reciente con taskId '${args.taskId}'`, true);
+        return formatTextResponse(`Error: No se encontró la tarea con taskId '${args.taskId}'.`, true);
       }
 
-      const maxLines = args.maxLines || 100;
-      const recentLogs = task.logs.slice(-maxLines);
+      const max = args.maxLines || 100;
+      const recentLogs = task.logs.slice(-max).join('');
 
-      return formatTextResponse({
-        taskId: task.id,
-        command: task.command,
-        pid: task.pid,
-        status: task.status,
-        exitCode: task.exitCode,
-        startTime: task.startTime,
-        totalLinesCaptured: task.logs.length,
-        linesReturned: recentLogs.length,
-        output: recentLogs.join('\n'),
-      });
+      return formatTextResponse(
+        `=== LOGS DE TAREA: ${task.name} (PID: ${task.pid} | Estado: ${task.status}) ===\n` +
+        (recentLogs || '(Sin salida acumulada todavía)')
+      );
     }
 
     case 'kill_background_task': {
       const task = backgroundTasks.get(args.taskId);
       if (!task) {
-        return formatTextResponse(`Error: No se encontró ninguna tarea con taskId '${args.taskId}'`, true);
-      }
-
-      if (task.status !== 'running') {
-        return formatTextResponse(`La tarea '${args.taskId}' ya había finalizado con estado '${task.status}' (código: ${task.exitCode}).`);
+        return formatTextResponse(`Error: No se encontró la tarea con taskId '${args.taskId}'.`, true);
       }
 
       try {
         if (isWindows && task.pid) {
-          exec(`taskkill /PID ${task.pid} /T /F`);
+          exec(`taskkill /PID ${task.pid} /F /T`);
         } else if (task.process) {
-          task.process.kill('SIGTERM');
+          task.process.kill('SIGKILL');
         }
-        task.status = 'killed';
-        return formatTextResponse(`Tarea '${args.taskId}' (PID ${task.pid}) finalizada con éxito.`);
+        task.status = 'KILLED';
+        return formatTextResponse(`Tarea '${task.name}' (PID: ${task.pid}) detenida y finalizada con éxito.`);
       } catch (err) {
-        return formatTextResponse(`Error intentando detener la tarea: ${err.message}`, true);
+        return formatTextResponse(`Error finalizando tarea: ${err.message}`, true);
       }
     }
 
     case 'list_background_tasks': {
-      const list = Array.from(backgroundTasks.values()).map((t) => ({
-        taskId: t.id,
-        command: t.command,
-        pid: t.pid,
-        status: t.status,
-        exitCode: t.exitCode,
-        startTime: t.startTime,
-        totalLogs: t.logs.length,
-      }));
+      const list = [];
+      for (const [id, t] of backgroundTasks.entries()) {
+        list.push({
+          taskId: id,
+          name: t.name,
+          command: t.command,
+          pid: t.pid,
+          status: t.status,
+          startTime: t.startTime,
+        });
+      }
 
       return formatTextResponse({
-        totalTasks: list.length,
-        activeTasks: list.filter((t) => t.status === 'running').length,
+        totalBackgroundTasks: list.length,
         tasks: list,
       });
     }
 
     case 'get_environment_vars': {
-      const env = { ...process.env };
-      // Ocultar tokens sensibles en logs
-      if (env.CONTROL_PLANE_API_KEY) env.CONTROL_PLANE_API_KEY = 'sk-***[PROTEGIDO]***';
-      if (env.OPENAI_API_KEY) env.OPENAI_API_KEY = 'sk-***[PROTEGIDO]***';
-
-      const filter = args.filter ? args.filter.toLowerCase() : null;
+      const sensitiveKeys = ['KEY', 'SECRET', 'TOKEN', 'PASS', 'AUTH', 'CREDENTIAL', 'COOKIE', 'SALT'];
+      const requested = args.names;
       const result = {};
 
-      for (const [k, v] of Object.entries(env)) {
-        if (!filter || k.toLowerCase().includes(filter) || (v && v.toLowerCase().includes(filter))) {
-          result[k] = v;
+      if (requested && requested.length > 0) {
+        for (const name of requested) {
+          const val = process.env[name];
+          if (val === undefined) {
+            result[name] = '(no definida)';
+          } else {
+            const isSensitive = sensitiveKeys.some((s) => name.toUpperCase().includes(s));
+            result[name] = isSensitive ? 'sk-***[PROTEGIDO]***' : val;
+          }
+        }
+      } else {
+        const safeCommonKeys = [
+          'OS', 'PROCESSOR_ARCHITECTURE', 'USER', 'USERNAME', 'USERPROFILE', 'HOME',
+          'SHELL', 'TERM', 'NODE_ENV', 'LANG', 'PWD', 'PATH',
+        ];
+        for (const k of safeCommonKeys) {
+          if (process.env[k]) {
+            result[k] = process.env[k];
+          }
         }
       }
 
