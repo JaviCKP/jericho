@@ -26,10 +26,10 @@ function ask(question, defaultValue = '') {
 
 async function main() {
   console.log('\n================================================================');
-  console.log('   🚀 OPENPC-MCP SUITE - ASISTENTE DE CONFIGURACIÓN RÁPIDA      ');
+  console.log('   🏛️ JERICHO - FROM CHAT TO AGENT: SETUP AUTOMÁTICO         ');
   console.log('================================================================\n');
   console.log('Este asistente configurará la conexión entre ChatGPT Web (chatgpt.com)');
-  console.log('y tu ordenador con visión, terminal, filesystem y control total.\n');
+  console.log('y tu ordenador con visión, terminal, filesystem y control Zero-Trust.\n');
 
   // 1. Comprobar binario
   if (!fs.existsSync(binaryPath)) {

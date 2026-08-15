@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0\.."
 
 echo ================================================================
-echo        OPENPC-MCP SUITE - SERVIDOR MCP EN EJECUCION
+echo               JERICHO - SERVIDOR MCP EN EJECUCION
 echo ================================================================
 echo.
 
