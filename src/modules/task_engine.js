@@ -4,12 +4,12 @@ const { execSync } = require('child_process');
 const { formatTextResponse, truncateString } = require('../utils/helpers');
 const config = require('../config');
 
-const tasksDir = path.join(config.workspaceDir, '.tasks');
-const memoryBankDir = path.join(config.workspaceDir, '.context');
+// Directorio raíz de tareas y contextos modulares
+const tasksRootDir = path.join(config.workspaceDir, '.tasks');
+const contextDir = path.join(config.workspaceDir, '.context');
 
-// Asegurar directorios
-if (!fs.existsSync(tasksDir)) fs.mkdirSync(tasksDir, { recursive: true });
-if (!fs.existsSync(memoryBankDir)) fs.mkdirSync(memoryBankDir, { recursive: true });
+if (!fs.existsSync(tasksRootDir)) fs.mkdirSync(tasksRootDir, { recursive: true });
+if (!fs.existsSync(contextDir)) fs.mkdirSync(contextDir, { recursive: true });
 
 function slugify(text) {
   return text
@@ -21,14 +21,44 @@ function slugify(text) {
     .replace(/\-\-+/g, '-');
 }
 
-function parseTaskMarkdown(content, filename) {
+/**
+ * Escanea recursivamente todas las hojas de contexto (.md) organizadas por proyecto
+ */
+function scanAllTaskFiles(dir = tasksRootDir) {
+  let results = [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results = results.concat(scanAllTaskFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+function parseTaskMarkdown(content, fullFilePath) {
   const lines = content.split(/\r?\n/);
+  const relPath = path.relative(tasksRootDir, fullFilePath);
+  const pathParts = relPath.split(path.sep);
+  const projectFromFolder = pathParts.length > 1 ? pathParts[0] : 'General';
+  const filename = path.basename(fullFilePath);
+
   let title = filename.replace('.md', '');
   let status = 'OPEN';
-  let project = 'General';
+  let project = projectFromFolder;
   let lastUpdated = '';
+  let sheetType = 'task'; // 'task', 'architecture', 'decisions', 'notes'
   const checklist = [];
   const relevantFiles = [];
+
+  if (filename.toLowerCase().includes('architecture') || filename.toLowerCase().includes('arquitectura')) {
+    sheetType = 'architecture';
+  } else if (filename.toLowerCase().includes('decision')) {
+    sheetType = 'decisions';
+  }
 
   let inChecklist = false;
   let inFiles = false;
@@ -36,8 +66,10 @@ function parseTaskMarkdown(content, filename) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    if (line.startsWith('# Tarea:') || line.startsWith('# Task:')) {
-      title = line.replace(/# (Tarea|Task):/, '').trim();
+    if (line.startsWith('# Tarea:') || line.startsWith('# Task:') || line.startsWith('# ')) {
+      if (!title || title === filename.replace('.md', '')) {
+        title = line.replace(/# (Tarea:|Task:)?/, '').trim();
+      }
     }
     const statusMatch = line.match(/\*\*Estado\*\*:\s*`?([A-Z_]+)`?/i) || line.match(/\*\*Status\*\*:\s*`?([A-Z_]+)`?/i);
     if (statusMatch) status = statusMatch[1].toUpperCase();
@@ -83,81 +115,115 @@ function parseTaskMarkdown(content, filename) {
 
   return {
     taskId: filename.replace('.md', ''),
+    sheetType: sheetType,
     title: title,
     status: status,
     project: project,
+    relativeFilePath: relPath,
     lastUpdated: lastUpdated,
     totalChecklist: totalCount,
     completedChecklist: completedCount,
     progressPercent: `${progressPercent}%`,
     relevantFiles: relevantFiles,
-    filePath: path.join(tasksDir, filename),
+    filePath: fullFilePath,
     rawContent: content,
   };
 }
 
+const AGENT_SYSTEM_PROTOCOL = `
+# 🤖 PROTOCOLO DE AUTONOMÍA DEL AGENTE OPENPC-MCP
+
+Como agente de software con acceso a este ordenador, DEBES seguir estas 3 directrices en cada conversación:
+
+1. 🚀 AL INICIAR LA CONVERSACIÓN:
+   - Si el usuario menciona una tarea o proyecto, ejecuta 'resume_task_session' para cargar la hoja de contexto correspondiente y ubicarte inmediatamente en el código, estado de Git y siguientes pasos.
+   - Si el usuario pregunta "¿qué teníamos pendiente?", ejecuta 'list_pending_tasks' para presentarle las tareas organizadas por carpetas de proyecto.
+
+2. 💻 DURANTE EL DESARROLLO:
+   - Utiliza 'edit_file_replace' para ediciones de código limpias sin romper archivos.
+   - Ejecuta 'run_command' para compilar, instalar o correr tests.
+   - Si inicias un servidor web o dev server, usa 'run_background_command' y verifica que el puerto esté abierto.
+   - Si realizas cambios visuales, usa 'take_screenshot' para verificar la interfaz.
+
+3. 📝 AL CONCLUIR O AL AVANZAR EN UN HITO (OBLIGATORIO):
+   - NUNCA cierres la sesión sin actualizar la hoja de contexto con 'save_or_update_task'.
+   - Marca los pasos completados [x], registra las decisiones técnicas tomadas y redacta con claridad los próximos pasos pendientes. Esto garantiza que cualquier chat futuro retome el trabajo con cero pérdida de memoria.
+`.trim();
+
 const taskEngineTools = [
   {
+    name: 'get_agent_protocol',
+    description: 'Obtiene las directrices y protocolo de operación del agente para mantener el contexto siempre sincronizado, gestionar hojas modulares y no perder nunca el estado de trabajo.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
     name: 'list_pending_tasks',
-    description: 'Lista todas las tareas y sesiones de trabajo almacenadas en el sistema (.tasks/) mostrando su estado, porcentaje de avance, fecha de actualización y resumen para saber en qué punto se quedó cada proyecto.',
+    description: 'Lista todas las hojas de contexto y tareas organizadas por carpetas de proyecto en .tasks/ con su porcentaje de avance, estado y archivos vinculados.',
     inputSchema: {
       type: 'object',
       properties: {
+        project: {
+          type: 'string',
+          description: 'Filtro opcional para listar solo las hojas de contexto de un proyecto específico (ej. "tienda-online", "api-backend").',
+        },
         statusFilter: {
           type: 'string',
           enum: ['ALL', 'IN_PROGRESS', 'PAUSED', 'COMPLETED'],
-          description: 'Filtro por estado (por defecto ALL o IN_PROGRESS).',
-        },
-        project: {
-          type: 'string',
-          description: 'Filtro opcional por nombre de proyecto o carpeta.',
+          description: 'Filtro por estado de tarea (por defecto ALL).',
         },
       },
     },
   },
   {
     name: 'resume_task_session',
-    description: 'Carga el contexto completo de una tarea específica para continuar programando o trabajando en ella. Devuelve el objetivo, checklist, decisiones técnicas, estado de Git y lee automáticamente los archivos de código clave vinculados a la tarea para que el modelo tenga contexto inmediato.',
+    description: 'Carga el contexto completo de una tarea u hoja modular de un proyecto (objetivo, checklist, Git, arquitectura) y previsualiza automáticamente los archivos de código vinculados para ubicarse al instante.',
     inputSchema: {
       type: 'object',
       properties: {
         taskIdOrQuery: {
           type: 'string',
-          description: 'Identificador exacto o palabra clave de la tarea (ej. "auth-jwt", "landing", "stripe"). Si se omite, carga la última tarea modificada.',
+          description: 'Nombre de la tarea, ID o término de búsqueda (ej. "auth-jwt", "stripe", "landing").',
+        },
+        project: {
+          type: 'string',
+          description: 'Carpeta o nombre del proyecto (opcional para desambiguar entre proyectos).',
         },
         includeFilePreviews: {
           type: 'boolean',
-          description: 'Si es true (por defecto true), lee y adjunta un extracto de los archivos relevantes listados en la tarea.',
+          description: 'Si es true (por defecto true), lee y adjunta fragmentos de los archivos clave.',
         },
       },
     },
   },
   {
     name: 'save_or_update_task',
-    description: 'Crea o actualiza el documento Markdown de una tarea en el sistema (.tasks/). Permite modificar el checklist de progreso, registrar archivos modificados, notas de arquitectura y definir los próximos pasos a realizar.',
+    description: 'Crea o actualiza una hoja de contexto modular en Markdown dentro de la carpeta del proyecto (.tasks/<proyecto>/<tarea>.md). Permite mantener el contexto dividido en hojas cortas y ordenadas por tema sin saturar un único archivo.',
     inputSchema: {
       type: 'object',
       properties: {
         taskId: {
           type: 'string',
-          description: 'ID único o nombre en slug de la tarea (ej. "auth-jwt", "migracion-db").',
-        },
-        title: {
-          type: 'string',
-          description: 'Título descriptivo de la tarea.',
+          description: 'Identificador único o slug de la hoja de contexto (ej. "01-autenticacion", "02-base-de-datos").',
         },
         project: {
           type: 'string',
-          description: 'Ruta o nombre del proyecto (ej. "C:\\Users\\javi\\ChatGPT-Workspace\\mi-app").',
+          description: 'Nombre de la carpeta del proyecto (ej. "mi-tienda-web", "backend-api"). Se creará una subcarpeta dedicada en .tasks/<project>/.',
+        },
+        title: {
+          type: 'string',
+          description: 'Título descriptivo de esta hoja de contexto.',
         },
         objective: {
           type: 'string',
-          description: 'Objetivo principal y criterios de aceptación de la tarea.',
+          description: 'Objetivo y alcance de esta hoja modular.',
         },
         relevantFiles: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Lista de archivos clave involucrados en esta tarea (ej. ["src/auth.js", "backend/server.py"]).',
+          description: 'Archivos clave del proyecto vinculados a esta hoja de contexto.',
         },
         checklist: {
           type: 'array',
@@ -166,17 +232,17 @@ const taskEngineTools = [
         },
         activeNotes: {
           type: 'string',
-          description: 'Contexto activo de la sesión: decisiones tomadas, problemas encontrados y estado actual del código.',
+          description: 'Notas técnicas, decisiones arquitectónicas y estado del código en esta sesión.',
         },
         nextSteps: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Lista ordenada de los siguientes pasos específicos para la próxima sesión.',
+          description: 'Lista ordenada de próximos pasos para la siguiente sesión.',
         },
         status: {
           type: 'string',
           enum: ['IN_PROGRESS', 'PAUSED', 'COMPLETED', 'BLOCKED'],
-          description: 'Estado actual de la tarea.',
+          description: 'Estado de la tarea.',
         },
       },
       required: ['taskId', 'title'],
@@ -184,7 +250,7 @@ const taskEngineTools = [
   },
   {
     name: 'memory_bank',
-    description: 'Consulta o actualiza el Memory Bank del proyecto (.context/): patrones de diseño, reglas de codificación, contexto tecnológico y decisiones permanentes.',
+    description: 'Consulta o actualiza el Memory Bank global (.context/): arquitectura general, patrones de diseño y decisiones transversales.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -195,7 +261,7 @@ const taskEngineTools = [
         },
         section: {
           type: 'string',
-          description: 'Nombre de la sección o archivo (ej. "systemPatterns", "techContext", "codingRules").',
+          description: 'Sección (ej. "systemPatterns", "techContext", "codingRules").',
         },
         content: {
           type: 'string',
@@ -209,73 +275,90 @@ const taskEngineTools = [
 
 async function handleTaskEngineTool(name, args) {
   switch (name) {
+    case 'get_agent_protocol': {
+      return formatTextResponse(AGENT_SYSTEM_PROTOCOL);
+    }
+
     case 'list_pending_tasks': {
-      const files = fs.readdirSync(tasksDir).filter((f) => f.endsWith('.md'));
-      if (files.length === 0) {
+      const allFiles = scanAllTaskFiles();
+      if (allFiles.length === 0) {
         return formatTextResponse({
           totalTasks: 0,
-          message: 'No hay tareas guardadas en .tasks/. Puedes crear una usando save_or_update_task.',
+          message: 'No hay hojas de contexto creadas en .tasks/. Usa save_or_update_task para crear una nueva.',
           tasks: [],
         });
       }
 
-      const tasks = [];
-      for (const f of files) {
+      const tasks = allFiles.map((f) => {
         try {
-          const content = fs.readFileSync(path.join(tasksDir, f), 'utf-8');
-          tasks.push(parseTaskMarkdown(content, f));
-        } catch (e) {}
-      }
-
-      // Ordenar por última modificación descendente
-      tasks.sort((a, b) => {
-        const statA = fs.statSync(a.filePath);
-        const statB = fs.statSync(b.filePath);
-        return statB.mtimeMs - statA.mtimeMs;
-      });
-
-      let filtered = tasks;
-      if (args && args.statusFilter && args.statusFilter !== 'ALL') {
-        filtered = filtered.filter((t) => t.status === args.statusFilter);
-      }
-      if (args && args.project) {
-        const pLow = args.project.toLowerCase();
-        filtered = filtered.filter((t) => t.project.toLowerCase().includes(pLow));
-      }
-
-      let summaryTable = `=== 📋 SESIONES Y TAREAS EN EL SISTEMA (${filtered.length} tareas) ===\n\n`;
-      filtered.forEach((t, i) => {
-        summaryTable += `${i + 1}. [${t.status}] **${t.title}** (ID: \`${t.taskId}\`)\n`;
-        summaryTable += `   📁 Proyecto: ${t.project} | 📈 Progreso: ${t.progressPercent} (${t.completedChecklist}/${t.totalChecklist}) | 🕒 Actualizado: ${t.lastUpdated}\n`;
-        if (t.relevantFiles.length > 0) {
-          summaryTable += `   📄 Archivos clave: ${t.relevantFiles.join(', ')}\n`;
+          return parseTaskMarkdown(fs.readFileSync(f, 'utf-8'), f);
+        } catch (e) {
+          return null;
         }
-        summaryTable += `\n`;
-      });
+      }).filter(Boolean);
 
-      summaryTable += `👉 Para reanudar una tarea, ejecuta: resume_task_session(taskIdOrQuery="<id_o_nombre>")`;
+      // Agrupar por proyecto
+      const projectsMap = new Map();
+      for (const t of tasks) {
+        if (args && args.statusFilter && args.statusFilter !== 'ALL' && t.status !== args.statusFilter) {
+          continue;
+        }
+        if (args && args.project && !t.project.toLowerCase().includes(args.project.toLowerCase())) {
+          continue;
+        }
+
+        if (!projectsMap.has(t.project)) {
+          projectsMap.set(t.project, []);
+        }
+        projectsMap.get(t.project).push(t);
+      }
+
+      let summaryTable = `=== 📁 HOJAS DE CONTEXTO POR PROYECTO (${tasks.length} hojas totales) ===\n\n`;
+
+      for (const [projName, projTasks] of projectsMap.entries()) {
+        summaryTable += `📦 **PROYECTO: ${projName}** (Carpeta: \`.tasks/${projName}/\`)\n`;
+        projTasks.forEach((t, idx) => {
+          summaryTable += `   ${idx + 1}. [${t.status}] **${t.title}** (ID: \`${t.taskId}\`)\n`;
+          summaryTable += `      📊 Progreso: ${t.progressPercent} (${t.completedChecklist}/${t.totalChecklist}) | 🕒 Actualizado: ${t.lastUpdated}\n`;
+          if (t.relevantFiles.length > 0) {
+            summaryTable += `      📄 Archivos: ${t.relevantFiles.join(', ')}\n`;
+          }
+        });
+        summaryTable += `\n`;
+      }
+
+      summaryTable += `👉 Para cargar una hoja de contexto, ejecuta: resume_task_session(taskIdOrQuery="<id_o_nombre>", project="<proyecto>")`;
 
       return formatTextResponse(summaryTable);
     }
 
     case 'resume_task_session': {
-      const files = fs.readdirSync(tasksDir).filter((f) => f.endsWith('.md'));
-      if (files.length === 0) {
-        return formatTextResponse('No se encontraron tareas en .tasks/. Usa save_or_update_task para crear la primera tarea.', true);
+      const allFiles = scanAllTaskFiles();
+      if (allFiles.length === 0) {
+        return formatTextResponse('No se encontraron hojas de contexto en .tasks/. Usa save_or_update_task para crear la primera.', true);
       }
 
       let targetFile = null;
       const query = args && args.taskIdOrQuery ? args.taskIdOrQuery.toLowerCase().trim() : null;
+      const projectFilter = args && args.project ? args.project.toLowerCase().trim() : null;
 
       if (query) {
         const slug = slugify(query);
-        targetFile = files.find((f) => f.toLowerCase().replace('.md', '') === slug);
+        targetFile = allFiles.find((f) => {
+          const base = path.basename(f, '.md').toLowerCase();
+          const matchSlug = base === slug || base.includes(slug);
+          if (projectFilter) {
+            return matchSlug && f.toLowerCase().includes(projectFilter);
+          }
+          return matchSlug;
+        });
 
         if (!targetFile) {
-          // Búsqueda difusa en nombres y contenido
-          for (const f of files) {
-            const content = fs.readFileSync(path.join(tasksDir, f), 'utf-8').toLowerCase();
-            if (f.toLowerCase().includes(query) || content.includes(query)) {
+          // Búsqueda en contenido
+          for (const f of allFiles) {
+            if (projectFilter && !f.toLowerCase().includes(projectFilter)) continue;
+            const content = fs.readFileSync(f, 'utf-8').toLowerCase();
+            if (content.includes(query)) {
               targetFile = f;
               break;
             }
@@ -284,45 +367,44 @@ async function handleTaskEngineTool(name, args) {
       }
 
       if (!targetFile) {
-        // Cargar la más recientemente editada
-        files.sort((a, b) => {
-          const statA = fs.statSync(path.join(tasksDir, a));
-          const statB = fs.statSync(path.join(tasksDir, b));
-          return statB.mtimeMs - statA.mtimeMs;
-        });
-        targetFile = files[0];
+        // Ordenar por última modificación descendente
+        allFiles.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+        targetFile = allFiles[0];
       }
 
-      const raw = fs.readFileSync(path.join(tasksDir, targetFile), 'utf-8');
+      const raw = fs.readFileSync(targetFile, 'utf-8');
       const parsed = parseTaskMarkdown(raw, targetFile);
 
       let contextBriefing = `=================================================================\n`;
-      contextBriefing += `🎯 RESUMEN DE CONTEXTO CARGADO: ${parsed.title}\n`;
+      contextBriefing += `🎯 HOJA DE CONTEXTO ACTIVA: ${parsed.title}\n`;
       contextBriefing += `=================================================================\n`;
-      contextBriefing += `ID Tarea: ${parsed.taskId} | Estado: ${parsed.status} | Progreso: ${parsed.progressPercent}\n`;
-      contextBriefing += `Proyecto Base: ${parsed.project}\n`;
+      contextBriefing += `ID: ${parsed.taskId} | Proyecto: ${parsed.project} | Estado: ${parsed.status} | Progreso: ${parsed.progressPercent}\n`;
+      contextBriefing += `Ubicación en disco: ${parsed.filePath}\n`;
       contextBriefing += `Última Actualización: ${parsed.lastUpdated}\n\n`;
-      contextBriefing += `--- CONTENIDO DE LA TAREA (MARKDOWN) ---\n${raw}\n\n`;
+      contextBriefing += `--- CONTENIDO DE LA HOJA DE CONTEXTO ---\n${raw}\n\n`;
 
       // 1. Estado de Git si el proyecto es un repo
-      if (parsed.project && fs.existsSync(parsed.project)) {
-        try {
-          const gitBranch = execSync('git branch --show-current', { cwd: parsed.project, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-          const gitStatus = execSync('git status --short', { cwd: parsed.project, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-          contextBriefing += `--- ESTADO DE GIT EN EL PROYECTO ---\n`;
-          contextBriefing += `Rama actual: ${gitBranch || 'main'}\n`;
-          contextBriefing += `Archivos modificados sin commit:\n${gitStatus || '(Árbol limpio)'}\n\n`;
-        } catch (e) {}
-      }
+      const projectPath = path.resolve(config.workspaceDir, parsed.project);
+      const repoCheckPath = fs.existsSync(projectPath) ? projectPath : config.workspaceDir;
 
-      // 2. Previsualización de archivos relevantes si están configurados
+      try {
+        const gitBranch = execSync('git branch --show-current', { cwd: repoCheckPath, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+        const gitStatus = execSync('git status --short', { cwd: repoCheckPath, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+        if (gitBranch || gitStatus) {
+          contextBriefing += `--- ESTADO DE GIT EN EL PROYECTO (${repoCheckPath}) ---\n`;
+          contextBriefing += `Rama: ${gitBranch || 'main'}\n`;
+          contextBriefing += `Cambios pendientes:\n${gitStatus || '(Árbol de trabajo limpio)'}\n\n`;
+        }
+      } catch (e) {}
+
+      // 2. Previsualización de archivos relevantes
       const includePreviews = args ? args.includeFilePreviews !== false : true;
       if (includePreviews && parsed.relevantFiles.length > 0) {
-        contextBriefing += `--- EXTRACTO DE ARCHIVOS CLAVE DEL PROYECTO ---\n`;
+        contextBriefing += `--- ARCHIVOS CLAVE ASOCIADOS A ESTA HOJA ---\n`;
         for (const relFile of parsed.relevantFiles.slice(0, 4)) {
           const fullFilePath = path.isAbsolute(relFile)
             ? relFile
-            : path.resolve(parsed.project || config.workspaceDir, relFile);
+            : path.resolve(repoCheckPath, relFile);
 
           if (fs.existsSync(fullFilePath)) {
             try {
@@ -339,18 +421,24 @@ async function handleTaskEngineTool(name, args) {
     }
 
     case 'save_or_update_task': {
+      const projectName = slugify(args.project || 'General');
       const taskId = slugify(args.taskId || args.title);
-      const taskFile = path.join(tasksDir, `${taskId}.md`);
+      const projectFolder = path.join(tasksRootDir, projectName);
+
+      if (!fs.existsSync(projectFolder)) {
+        fs.mkdirSync(projectFolder, { recursive: true });
+      }
+
+      const taskFile = path.join(projectFolder, `${taskId}.md`);
       const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
       let oldTask = null;
       if (fs.existsSync(taskFile)) {
         const oldContent = fs.readFileSync(taskFile, 'utf-8');
-        oldTask = parseTaskMarkdown(oldContent, `${taskId}.md`);
+        oldTask = parseTaskMarkdown(oldContent, taskFile);
       }
 
       const title = args.title || (oldTask ? oldTask.title : taskId);
-      const project = args.project || (oldTask ? oldTask.project : config.workspaceDir);
       const status = args.status || (oldTask ? oldTask.status : 'IN_PROGRESS');
       const objective = args.objective || (oldTask ? '' : 'No especificado');
 
@@ -381,10 +469,10 @@ async function handleTaskEngineTool(name, args) {
         `# Tarea: ${title}`,
         `**ID**: \`${taskId}\``,
         `**Estado**: \`${status}\``,
-        `**Proyecto**: \`${project}\``,
+        `**Proyecto**: \`${projectName}\``,
         `**Actualizado**: \`${now}\``,
         ``,
-        `## 🎯 Objetivo & Criterios de Aceptación`,
+        `## 🎯 Objetivo & Alcance`,
         `${objective}`,
         ``,
         `## 📁 Archivos Relevantes`,
@@ -400,28 +488,28 @@ async function handleTaskEngineTool(name, args) {
         `${nextStepsText || '1. Continuar con el checklist pendiente'}`,
         ``,
         `---`,
-        `*Documento de tarea gestionado por OpenPC-MCP Task Engine.*`,
+        `*Hoja de contexto gestionada por OpenPC-MCP Task Engine.*`,
       ].join('\n');
 
       fs.writeFileSync(taskFile, mdDocument, 'utf-8');
 
       return formatTextResponse({
-        message: 'Tarea y contexto guardados con éxito en Markdown',
+        message: 'Hoja de contexto guardada con éxito en la carpeta del proyecto',
         taskId: taskId,
+        project: projectName,
         filePath: taskFile,
         status: status,
-        project: project,
       });
     }
 
     case 'memory_bank': {
       const action = args.action;
-      const memBankFile = path.join(memoryBankDir, 'MEMORY_BANK.md');
+      const memBankFile = path.join(contextDir, 'MEMORY_BANK.md');
 
       if (!fs.existsSync(memBankFile)) {
         const initialContent = [
-          `# 🧠 OpenPC-MCP: Project Memory Bank`,
-          `*Reglas de ingeniería, patrones de diseño y decisiones arquitectónicas globales.*`,
+          `# 🧠 OpenPC-MCP: Global Memory Bank`,
+          `*Reglas de ingeniería, patrones de diseño y decisiones arquitectónicas transversales.*`,
           ``,
           `## 📐 Reglas de Codificación`,
           `- Escribir código modular, tipado y bien testeado.`,
