@@ -1,0 +1,43 @@
+{
+  "name": "chatgpt-pc-mcp",
+  "version": "1.0.0",
+  "description": "Production-grade Model Context Protocol (MCP) server connecting ChatGPT Web to your local computer with computer use, vision, advanced terminal, filesystem, git, and context checkpoints.",
+  "main": "src/index.js",
+  "bin": {
+    "chatgpt-pc-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "node scripts/setup.js",
+    "download-binaries": "node scripts/download-binaries.js",
+    "doctor": "node scripts/doctor.js",
+    "test": "node tests/test-modules.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "chatgpt",
+    "chatgpt-web",
+    "openai-tunnel",
+    "computer-use",
+    "automation",
+    "desktop-control",
+    "vision",
+    "context-checkpoints"
+  ],
+  "author": "Antigravity Open Source Community",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@nut-tree-fork/nut-js": "^4.0.0",
+    "dotenv": "^16.4.7",
+    "diff": "^7.0.0",
+    "glob": "^11.0.1",
+    "jimp": "^1.6.0",
+    "screenshot-desktop": "^1.15.0",
+    "turndown": "^7.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

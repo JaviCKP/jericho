@@ -1,0 +1,27 @@
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Environment variables & secrets
+.env
+config.env
+*.pem
+*.key
+
+# Data, logs & runtime
+data/checkpoints/*.json
+!data/checkpoints/.gitkeep
+data/long_term_memory.json
+data/*.log
+*.log
+
+# Binaries
+bin/*.exe
+bin/tunnel-client
+bin/cloudflared
+bin/*.zip
+
+# OS artifacts
+Thumbs.db
+.DS_Store
+*.tmp
