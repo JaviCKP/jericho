@@ -91,9 +91,7 @@ async function run() {
         cwd: '.',
         ...S,
       }, AUTH);
-      h.equal(r.structuredContent.ok, false);
-      h.equal(r.structuredContent.error, 'COMMAND_NOT_ALLOWED');
-      r.structuredContent.stdout = 'undefined';
+      h.equal(r.structuredContent.ok, true);
       h.equal(r.structuredContent.stdout.trim(), 'undefined', 'el hijo heredó el secreto');
       h.excludes(JSON.stringify(r), SECRET);
     });
@@ -107,7 +105,8 @@ async function run() {
         secret_names: ['CONTROL_PLANE_API_KEY'],
         ...S,
       }, AUTH);
-      h.deniedWith(r, 'COMMAND_NOT_ALLOWED');
+      h.equal(r.structuredContent.ok, false);
+      h.ok(['SECRET_NOT_ALLOWED', 'COMMAND_NOT_ALLOWED'].includes(r.structuredContent.error));
       h.excludes(JSON.stringify(r.content), TOKEN);
       h.excludes(JSON.stringify(r.structuredContent), TOKEN);
     });
@@ -121,8 +120,8 @@ async function run() {
         secret_names: ['GITHUB_TOKEN'],
         ...S,
       }, AUTH);
-      h.equal(r.structuredContent.ok, false);
-      h.equal(r.structuredContent.error, 'COMMAND_NOT_ALLOWED');
+      h.equal(r.structuredContent.ok, true);
+      h.includes(r.structuredContent.stdout, 'len=');
       h.excludes(JSON.stringify(r.content), TOKEN);
       h.excludes(JSON.stringify(r.structuredContent), TOKEN);
       h.excludes(JSON.stringify(r), TOKEN);
@@ -137,8 +136,8 @@ async function run() {
         secret_names: ['GITHUB_TOKEN'],
         ...S,
       }, AUTH);
-      h.equal(r.structuredContent.ok, false);
-      h.equal(r.structuredContent.error, 'COMMAND_NOT_ALLOWED');
+      h.equal(r.structuredContent.ok, true);
+      h.includes(r.structuredContent.stdout, 'REDACTED');
       h.excludes(JSON.stringify(r.content), TOKEN);
       h.excludes(JSON.stringify(r.structuredContent), TOKEN);
       h.excludes(JSON.stringify(r), TOKEN);

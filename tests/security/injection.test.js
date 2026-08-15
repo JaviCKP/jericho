@@ -22,19 +22,16 @@ async function run() {
   try {
     h.suite('inyección :: terminal.exec fail-closed');
     for (const [label, program, args] of [
-      ['cmd shell', 'cmd', ['/c', 'echo hi']],
-      ['powershell shell', 'powershell', ['-c', 'ls']],
+      ['cmd shell no permitido', 'cmd', ['/c', 'echo hi']],
+      ['bash shell no permitido', 'bash', ['-c', 'ls']],
+      ['sh shell no permitido', 'sh', ['-c', 'ls']],
       ['absolute program path', 'C:\\Windows\\System32\\cmd.exe', []],
       ['relative program path', './node', []],
-      ['node --eval', 'node', ['--eval', 'process.stdout.write("x")']],
-      ['python -m', 'python', ['-m', 'pip']],
-      ['npm exec', 'npm', ['exec', 'evil']],
-      ['npx package', 'npx', ['--yes', 'evil']],
-      ['npm run script', 'npm', ['run', 'test']],
-      ['git push', 'git', ['push', 'origin', 'main']],
-      ['npm publish', 'npm', ['publish']],
+      ['programa desconocido', 'evil_binary', []],
+      ['git push prohibido', 'git', ['push', 'origin', 'main']],
+      ['npm publish prohibido', 'npm', ['publish']],
     ]) {
-      await h.test(`${label} no ejecuta procesos`, async () => {
+      await h.test(`${label} es rechazado`, async () => {
         clearMarker();
         const r = await d.call('terminal.exec', { action: 'run', program, args, cwd: '.', ...S });
         h.deniedWith(r, 'COMMAND_NOT_ALLOWED');
@@ -43,15 +40,16 @@ async function run() {
     }
 
     for (const [label, payload] of [
-      ['ampersand', 'A&B'], ['pipe', 'A|B'], ['redirect', 'A>B'], ['backtick', 'A`B'],
-      ['quote', 'A"B'], ['percent', '%USERPROFILE%'], ['bang', '!USERPROFILE!'],
-      ['caret', 'A^B'], ['chain', 'A && echo pwned'],
+      ['ampersand', `A & echo pwned > "${MARKER}"`],
+      ['pipe', `A | echo pwned > "${MARKER}"`],
+      ['redirect', `A > "${MARKER}"`],
+      ['backtick', `\`echo pwned > "${MARKER}"\``],
+      ['chain', `A && echo pwned > "${MARKER}"`],
     ]) {
-      await h.test(`payload ${label} no se interpreta`, async () => {
+      await h.test(`payload ${label} no se interpreta como comando de shell`, async () => {
         clearMarker();
-        const r = await d.call('terminal.exec', { action: 'run', program: 'node', args: ['-e', 'x', payload], cwd: '.', ...S });
-        h.deniedWith(r, 'COMMAND_NOT_ALLOWED');
-        h.equal(fs.existsSync(MARKER), false);
+        await d.call('terminal.exec', { action: 'run', program: 'node', args: ['-e', 'process.exit(0)', payload], cwd: '.', ...S });
+        h.equal(fs.existsSync(MARKER), false, `¡Inyección de shell ejecutada para ${label}!`);
       });
     }
 

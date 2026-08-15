@@ -133,7 +133,7 @@ class ProcessRegistry {
 
   list({ sessionId = null } = {}) {
     return [...this.live.values()]
-      .filter((r) => !sessionId || !r.session_id || r.session_id === sessionId)
+      .filter((r) => !sessionId || r.session_id === sessionId)
       .map(({ child, ...rest }) => rest);
   }
 

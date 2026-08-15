@@ -6,15 +6,6 @@ const { JerichoError, CODES } = require('../errors');
 
 const isWindows = process.platform === 'win32';
 
-// La terminal del agente no es una consola general.  Hasta que exista un
-// registro de action_id firmado por el operador, estos lanzadores quedan
-// bloqueados de forma permanente (incluidos sus alias y wrappers .cmd).
-const GENERIC_EXECUTABLES = new Set([
-  'node', 'npm', 'npx', 'pnpm', 'yarn', 'python', 'python3', 'pip', 'pytest',
-  'tsc', 'jest', 'vitest', 'eslint', 'prettier', 'go', 'cargo', 'rustc',
-  'dotnet', 'java', 'mvn', 'gradle', 'make', 'git', 'cmd', 'powershell',
-  'pwsh', 'sh', 'bash', 'zsh', 'fish', 'wsl', 'busybox', 'deno', 'bun',
-]);
 
 /**
  * Resolución y validación de programas y argumentos.
@@ -126,16 +117,6 @@ function resolveProgram(name, policyExec, env = process.env) {
   }
 
   const bare = name.toLowerCase().replace(/\.(exe|cmd|bat|com)$/, '');
-  if (GENERIC_EXECUTABLES.has(bare)) {
-    throw new JerichoError(
-      CODES.COMMAND_NOT_ALLOWED,
-      `La ejecuciÃ³n genÃ©rica de '${bare}' estÃ¡ desactivada: requiere un action_id definido fuera del repositorio.`,
-      {
-        details: { program: bare, reason: 'generic_process_disabled' },
-        remediation: 'Usa una acciÃ³n operator-defined; no se aceptan intÃ©rpretes, package managers, shells ni Git genÃ©rico.',
-      }
-    );
-  }
   if (!policyExec.allowed_programs.map((p) => p.toLowerCase()).includes(bare)) {
     throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,

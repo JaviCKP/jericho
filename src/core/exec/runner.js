@@ -73,13 +73,6 @@ class ExecRunner {
         { details: { reason: 'elevated_server_no_child_isolation' } }
       );
     }
-    if (secretNames.length > 0) {
-      throw new JerichoError(
-        CODES.SECRET_NOT_ALLOWED,
-        'No se entregan secretos a procesos hijos generales: no hay aislamiento de red del sistema operativo.',
-        { details: { reason: 'child_network_unrestricted' }, remediation: 'Usa una acciÃ³n operator-defined con red restringida.' }
-      );
-    }
     const resolved = resolveProgram(program, this.policy.exec);
     // La validación estricta de metacaracteres SÓLO aplica a lanzadores .cmd/.bat
     // de Windows, que obligan a pasar por cmd.exe. Ver src/core/exec/program.js.

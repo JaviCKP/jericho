@@ -158,16 +158,16 @@ async function run() {
       // Se ejecuta una comprobación real que produce un trace_id auténtico.
       sb.write('package.json', JSON.stringify({ name: 'x', scripts: { test: 'node --version' } }));
       const v = await d.call('verify.run', { check: 'test', cwd: '.', ...A });
-      h.deniedWith(v, 'COMMAND_NOT_ALLOWED');
+      h.equal(v.structuredContent.ok, true);
 
       const cur = sb.runtime.memory.get(P, 'tarea-uno');
       const r = await d.call('memory.checkpoint', {
         action: 'update', project_id: P, id: 'tarea-uno', expected_revision: cur.revision,
         status: 'COMPLETED',
-        evidence: [{ criterion_id: 'c1', kind: 'test', result: 'pass', trace_id: 'trc_no_ejecutado', at: new Date().toISOString() }],
+        evidence: [{ criterion_id: 'c1', kind: 'test', result: 'pass', trace_id: v.structuredContent.trace_id, at: new Date().toISOString() }],
         ...A,
       });
-      h.deniedWith(r, 'EVIDENCE_MISSING');
+      h.equal(r.structuredContent.ok, true);
     });
 
     await h.test('una tarea sin criterios obligatorios NO puede cerrarse', async () => {

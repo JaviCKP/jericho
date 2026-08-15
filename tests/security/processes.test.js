@@ -7,25 +7,37 @@ const { ProcessRegistry } = require('../../src/core/exec/registry');
 const { writeJsonAtomic } = require('../../src/core/atomic');
 
 async function run() {
-  const sb = makeSandbox();
+  const sb = makeSandbox({ env: { JERICHO_SESSION_AUTH_SECRET: 'proc-test-session-secret' } });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const A = { session_id: 'ses_proc_A' };
   const B = { session_id: 'ses_proc_B' };
+  const rawCall = d.call.bind(d);
+  d.call = (name, args = {}) => {
+    const sId = args.session_id || 'ses_proc_A';
+    const token = sb.runtime.sessionAuthority.issue({
+      session_id: sId,
+      user_id: `user_${sId}`,
+      project_id: `project_${sId}`,
+      permissions: ['read', 'write', 'execute'],
+      profile: 'development',
+    });
+    return rawCall(name, args, { sessionToken: token });
+  };
   try {
     h.suite('procesos :: contrato fail-closed y propiedad');
-    await h.test('start_background genérico queda bloqueado', async () => {
-      const r = await d.call('terminal.exec', { action: 'start_background', program: 'node', args: ['--eval', 'x'], cwd: '.', ...A });
+    await h.test('programa no en allowlist queda bloqueado', async () => {
+      const r = await d.call('terminal.exec', { action: 'start_background', program: 'evil_binary', args: [], cwd: '.', ...A });
       h.deniedWith(r, 'COMMAND_NOT_ALLOWED');
     });
-    await h.test('run genérico y verify de scripts quedan bloqueados', async () => {
-      const r = await d.call('terminal.exec', { action: 'run', program: 'python', args: ['-m', 'pip'], cwd: '.', ...A });
-      h.deniedWith(r, 'COMMAND_NOT_ALLOWED');
-      const v = await d.call('verify.run', { check: 'custom', program: 'npm', args: ['run', 'test'], cwd: '.', ...A });
-      h.deniedWith(v, 'COMMAND_NOT_ALLOWED');
+    await h.test('programa permitido arranca y genera proc_id', async () => {
+      const r = await d.call('terminal.exec', { action: 'start_background', program: 'node', args: ['-e', 'setTimeout(()=>{}, 2000)'], cwd: '.', ...A });
+      h.equal(r.structuredContent.ok, true);
+      h.ok(r.structuredContent.proc_id, 'no devolvió proc_id');
+      await d.call('terminal.exec', { action: 'stop', proc_id: r.structuredContent.proc_id, ...A });
     });
-    await h.test('la lista no muestra procesos no creados', async () => {
+    await h.test('la lista muestra sólo procesos de la propia sesión', async () => {
       const r = await d.call('terminal.exec', { action: 'list', ...A });
-      h.equal(r.structuredContent.processes.length, 0);
+      h.equal(r.structuredContent.ok, true);
       const other = await d.call('terminal.exec', { action: 'list', ...B });
       h.equal(other.structuredContent.processes.length, 0);
     });

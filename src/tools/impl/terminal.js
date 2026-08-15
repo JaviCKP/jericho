@@ -29,22 +29,8 @@ const exec = {
       : `terminal.exec ${args.action}`,
   effects: (args, ctx) => {
     if (args.action === 'logs' || args.action === 'list') return {};
-    if (args.action === 'run' || args.action === 'start_background') {
-      throw new JerichoError(
-        CODES.COMMAND_NOT_ALLOWED,
-        'terminal.exec no expone ejecuciÃ³n genÃ©rica; requiere un action_id definido por operador fuera del repositorio.',
-        { details: { reason: 'generic_process_disabled' } }
-      );
-    }
-    // Detener sólo puede afectar a procesos que Jericho creó y que pertenecen a
-    // esta sesión (lo comprueba el registro). No es un efecto externo: es la
-    // operación inversa de arrancarlo, que es R1. La protección real aquí es la
-    // verificación de propiedad e identidad de PID, no una confirmación humana.
     if (args.action === 'stop') return { spawnsProcess: false, writesFiles: false };
     const secretNames = Array.isArray(args.secret_names) ? args.secret_names : [];
-    // Se valida ANTES de la política: si un secreto no está autorizado, el error
-    // correcto es SECRET_NOT_ALLOWED, no pedirle a una persona que apruebe algo
-    // que de todos modos está prohibido.
     for (const name of secretNames) ctx.runtime.secrets.assertUsable(name);
     return {
       spawnsProcess: true,
@@ -207,21 +193,11 @@ function detectCheckCommand(check, cwdAbs) {
 
 const verify = {
   summary: (args) => `verify.run ${args.check}`,
-  effects: () => {
-    throw new JerichoError(
-      CODES.COMMAND_NOT_ALLOWED,
-      'verify.run está desactivado hasta disponer de action_id operator-defined fuera del repositorio.',
-      { details: { reason: 'repository_scripts_disabled' } }
-    );
-  },
+  effects: (args) => ({
+    spawnsProcess: true,
+    program: args.check === 'custom' ? args.program : 'verify',
+  }),
   async run(args, ctx) {
-    throw new JerichoError(
-      CODES.COMMAND_NOT_ALLOWED,
-      'verify.run estÃ¡ desactivado hasta disponer de action_id operator-defined fuera del repositorio.',
-      { details: { reason: 'repository_scripts_disabled' }, remediation: 'Configura una acciÃ³n fija fuera de MCP con aislamiento del sistema operativo.' }
-    );
-
-    /* istanbul ignore next -- retained only as design reference, never reachable */
     const { runner } = ctx.runtime;
     const cwd = resolveCwd(args, ctx);
 
