@@ -15,6 +15,7 @@ const { NetworkGuard } = require('./net/guard');
 const { MemoryStore } = require('./memory/store');
 const { ObservationStore } = require('./desktop/observe');
 const { sweepTemp } = require('./atomic');
+const { SessionAuthority } = require('./session/authority');
 
 /**
  * Construye el runtime completo de GhostPC.
@@ -53,6 +54,7 @@ function createRuntime(options = {}) {
   const approvals = new ApprovalStore(paths.approvalsDir, {
     ttlMs: (policy.approval.ttl_minutes || 15) * 60 * 1000,
     journal,
+    operatorSecret: env.GHOSTPC_OPERATOR_SECRET,
   });
 
   // 4. Raíces autorizadas. El directorio de control queda excluido siempre.
@@ -86,6 +88,10 @@ function createRuntime(options = {}) {
     metrics,
     profiles: options.profiles || {},
   });
+  const sessionAuthority = new SessionAuthority({
+    secret: env.GHOSTPC_SESSION_AUTH_SECRET,
+    policyRevision: require('crypto').createHash('sha256').update(JSON.stringify(policy)).digest('hex'),
+  });
 
   const runtime = {
     env,
@@ -104,6 +110,7 @@ function createRuntime(options = {}) {
     memory,
     observations,
     engine,
+    sessionAuthority,
     knownSecrets,
     startedAt: new Date().toISOString(),
   };

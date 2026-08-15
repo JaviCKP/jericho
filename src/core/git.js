@@ -14,20 +14,51 @@ const { GhostError, CODES } = require('./errors');
  */
 
 class Git {
-  constructor(runner) {
+  constructor(runner, roots = null) {
     this.runner = runner;
+    this.roots = roots;
   }
 
   async _git(args, cwd, { session, traceId, tool, timeoutMs = 20_000 } = {}) {
+    this._authorizeRepo(cwd, args);
+    this._assertSafeArgs(args);
     return this.runner.run({
       program: 'git',
-      args,
+      // These options are owned by the facade, not by the caller.  In
+      // particular hooks and external pagers/helpers cannot be selected by a
+      // model supplied argument or inherited Git configuration.
+      args: ['--no-pager', '-c', 'core.hooksPath=', '-c', 'core.pager=cat', '-c', 'diff.external=', ...args],
       cwd,
       timeoutMs,
       session,
       traceId,
       tool: tool || 'git',
     });
+  }
+
+  _authorizeRepo(cwd) {
+    if (!this.roots) {
+      throw new GhostError(CODES.PATH_OUTSIDE_ROOT, 'Git requiere una raíz autorizada para el repositorio.');
+    }
+    this.roots.resolve(cwd, { mustExist: true });
+  }
+
+  _assertSafeArgs(args) {
+    if (!Array.isArray(args)) throw new GhostError(CODES.INVALID_ARGUMENT, 'Argumentos Git inválidos.');
+    const forbidden = /^(?:-C|--git-dir(?:=|$)|--work-tree(?:=|$)|--upload-pack(?:=|$)|--receive-pack(?:=|$)|--exec-path(?:=|$)|--config-env(?:=|$))/i;
+    const dangerous = new Set(['push', 'clean', 'reset', 'rebase', 'clone', 'remote']);
+    for (const arg of args) {
+      if (typeof arg !== 'string' || forbidden.test(arg)) {
+        throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'Opción Git no permitida por la fachada.');
+      }
+      if (/^(?:core\.sshCommand|diff\.external|core\.pager|pager\.|remote\..*\.(?:uploadpack|receivepack)|sshCommand)=/i.test(arg)) {
+        throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'Configuración Git externa no permitida por la fachada.');
+      }
+    }
+    const command = args.find((a) => !a.startsWith('-'));
+    if (dangerous.has(String(command || '').toLowerCase())) {
+      throw new GhostError(CODES.COMMAND_NOT_ALLOWED, `La operación Git '${command}' no está disponible.`);
+    }
   }
 
   async isRepo(cwd, ctx = {}) {
@@ -108,6 +139,11 @@ class Git {
         'Debes indicar explícitamente los archivos a incluir. GhostPC no hace `git add -A`: ' +
           'eso mezclaría cambios de otra sesión que estuviera trabajando en el mismo árbol.'
       );
+    }
+    for (const file of files) {
+      if (typeof file !== 'string' || file.length === 0 || file.startsWith('-') || file.includes('\0')) {
+        throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'El pathspec Git no puede ser una opción.');
+      }
     }
     const addArgs = ['add', '--', ...files];
     const addRes = await this._git(addArgs, cwd, ctx);

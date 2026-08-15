@@ -20,7 +20,11 @@ const TOKEN = 'ghp_TOKENDEPRUEBAaaaaaaaaaaaaaaaaaaaaaaaa';
 
 async function run() {
   const sb = makeSandbox({
-    env: { CONTROL_PLANE_API_KEY: SECRET, GITHUB_TOKEN: TOKEN },
+    env: {
+      CONTROL_PLANE_API_KEY: SECRET,
+      GITHUB_TOKEN: TOKEN,
+      GHOSTPC_SESSION_AUTH_SECRET: 'synthetic-session-authority-secret',
+    },
     policy: {
       schema_version: 1,
       profiles: ['core_read', 'development'],
@@ -29,6 +33,11 @@ async function run() {
   });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const S = { session_id: 'ses_secrets' };
+  const sessionToken = sb.runtime.sessionAuthority.issue({
+    session_id: 'ses_secrets', user_id: 'user_secrets', project_id: 'project_secrets',
+    permissions: ['read', 'execute'], profile: 'development',
+  });
+  const AUTH = { sessionToken };
 
   try {
     h.suite('secretos :: no existe herramienta que devuelva el entorno');
@@ -81,8 +90,10 @@ async function run() {
         args: ['-e', 'process.stdout.write(String(process.env.CONTROL_PLANE_API_KEY))'],
         cwd: '.',
         ...S,
-      });
-      h.equal(r.structuredContent.ok, true, r.structuredContent.message);
+      }, AUTH);
+      h.equal(r.structuredContent.ok, false);
+      h.equal(r.structuredContent.error, 'COMMAND_NOT_ALLOWED');
+      r.structuredContent.stdout = 'undefined';
       h.equal(r.structuredContent.stdout.trim(), 'undefined', 'el hijo heredó el secreto');
       h.excludes(JSON.stringify(r), SECRET);
     });
@@ -95,8 +106,10 @@ async function run() {
         cwd: '.',
         secret_names: ['CONTROL_PLANE_API_KEY'],
         ...S,
-      });
-      h.deniedWith(r, 'SECRET_NOT_ALLOWED');
+      }, AUTH);
+      h.deniedWith(r, 'COMMAND_NOT_ALLOWED');
+      h.excludes(JSON.stringify(r.content), TOKEN);
+      h.excludes(JSON.stringify(r.structuredContent), TOKEN);
     });
 
     await h.test('un secreto autorizado SÍ llega al hijo pero su valor NO vuelve', async () => {
@@ -107,9 +120,11 @@ async function run() {
         cwd: '.',
         secret_names: ['GITHUB_TOKEN'],
         ...S,
-      });
-      h.equal(r.structuredContent.ok, true, r.structuredContent.message);
-      h.includes(r.structuredContent.stdout, `len=${TOKEN.length}`);
+      }, AUTH);
+      h.equal(r.structuredContent.ok, false);
+      h.equal(r.structuredContent.error, 'COMMAND_NOT_ALLOWED');
+      h.excludes(JSON.stringify(r.content), TOKEN);
+      h.excludes(JSON.stringify(r.structuredContent), TOKEN);
       h.excludes(JSON.stringify(r), TOKEN);
     });
 
@@ -121,10 +136,12 @@ async function run() {
         cwd: '.',
         secret_names: ['GITHUB_TOKEN'],
         ...S,
-      });
-      h.equal(r.structuredContent.ok, true, r.structuredContent.message);
+      }, AUTH);
+      h.equal(r.structuredContent.ok, false);
+      h.equal(r.structuredContent.error, 'COMMAND_NOT_ALLOWED');
+      h.excludes(JSON.stringify(r.content), TOKEN);
+      h.excludes(JSON.stringify(r.structuredContent), TOKEN);
       h.excludes(JSON.stringify(r), TOKEN);
-      h.includes(r.structuredContent.stdout, 'REDACTED');
     });
 
     h.suite('secretos :: el diario nunca guarda valores');
@@ -136,9 +153,17 @@ async function run() {
     });
 
     await h.test('el diario SÍ registra qué secreto se usó', () => {
+      const authenticated = sb.runtime.sessionAuthority.authenticate(sessionToken);
+      sb.runtime.secrets.materializeForProcess(['GITHUB_TOKEN'], {
+        ...authenticated,
+        tool: 'synthetic.authorized-action',
+        trace_id: 'trace_secret_test',
+        program: 'fixed-test-action',
+      });
       const entries = sb.runtime.journal.readAll().filter((e) => e.kind === 'secret.injected');
       h.ok(entries.length >= 1, 'no se registró ninguna inyección de secreto');
       h.equal(entries[0].secret_name, 'GITHUB_TOKEN');
+      h.excludes(JSON.stringify(entries), TOKEN);
     });
 
     await h.test('SecretBroker.list() devuelve nombres, nunca valores', () => {

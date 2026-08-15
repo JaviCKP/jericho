@@ -293,6 +293,12 @@ const applyPatchTool = {
         state: result.rollback_state,
         created_at: Date.now(),
         session_id: ctx.session.session_id,
+        user_id: ctx.session.user_id,
+        project_id: ctx.session.project_id,
+        operation: 'workspace.apply_patch',
+        files: result.files.map((f) => f.path),
+        nonce: crypto.randomBytes(16).toString('hex'),
+        expires_at: Date.now() + 3600_000,
       });
       // Se limpian tokens de más de una hora.
       for (const [k, v] of ctx.dispatcher.rollbacks) {
@@ -363,6 +369,19 @@ const rollback = {
         `rollback_token '${args.rollback_token}' desconocido o caducado (los tokens duran 1 hora y no sobreviven a un reinicio).`,
         { recoverable: false, remediation: 'Usa git.inspect(diff) y genera un parche inverso.' }
       );
+    }
+    if (!ctx.session.user_id || !ctx.session.project_id || entry.expires_at < Date.now() || entry.session_id !== ctx.session.session_id || entry.user_id !== ctx.session.user_id || entry.project_id !== ctx.session.project_id) {
+      throw new GhostError(CODES.POLICY_DENIED, 'El rollback no pertenece a la sesión, usuario o proyecto autenticado.');
+    }
+    // Compare-and-swap: any edit after apply is a conflict, never overwrite it.
+    for (const state of entry.state) {
+      const exists = fs.existsSync(state.absolute);
+      const current = exists ? fs.readFileSync(state.absolute, 'utf8') : null;
+      const currentHash = exists ? sha256Text(current) : null;
+      const expected = state.after_hash || null;
+      if ((expected !== null && currentHash !== expected) || (expected === null && !state.existed && exists)) {
+        throw new GhostError(CODES.REVISION_CONFLICT, 'CONFLICT: el archivo cambió después del parche; no se sobrescribió ningún dato.');
+      }
     }
     const res = rollbackPatch(entry.state);
     ctx.dispatcher.rollbacks.delete(args.rollback_token);

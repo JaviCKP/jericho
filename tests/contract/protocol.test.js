@@ -11,7 +11,10 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const h = require('../harness');
+const { loadPolicy } = require('../../src/core/policy/loader');
+const { SessionAuthority } = require('../../src/core/session/authority');
 
 const SERVER = path.resolve(__dirname, '../../src/index.js');
 
@@ -89,15 +92,23 @@ class RawClient {
 
 function sandboxEnv() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-proto-'));
-  return {
-    dir: base,
-    env: {
+  const secret = 'protocol-test-session-secret';
+  const env = {
       CHATGPT_WORKSPACE: path.join(base, 'ws'),
       GHOSTPC_CONTROL_DIR: path.join(base, 'control'),
       GHOSTPC_MEMORY_DIR: path.join(base, 'memory'),
       GHOSTPC_POLICY_FILE: path.join(base, 'control', 'policy.json'),
+      GHOSTPC_SESSION_AUTH_SECRET: secret,
       LOG_LEVEL: 'ERROR',
-    },
+    };
+  const { policy } = loadPolicy({ policyFile: env.GHOSTPC_POLICY_FILE, env });
+  const revision = crypto.createHash('sha256').update(JSON.stringify(policy)).digest('hex');
+  env.GHOSTPC_MCP_SESSION_TOKEN = new SessionAuthority({ secret, policyRevision: revision }).issue({
+    session_id: 'protocol-session', user_id: 'protocol-user', project_id: 'demo', permissions: ['read'], profile: 'core_read',
+  });
+  return {
+    dir: base,
+    env,
   };
 }
 
@@ -236,7 +247,7 @@ async function run() {
       });
       h.equal(res.result.isError, true);
       h.includes(res.result.content[0].text, 'COMMAND_NOT_ALLOWED');
-      h.includes(res.result.content[0].text, 'Qué hacer:');
+      h.includes(res.result.content[0].text, 'action_id');
     });
   } finally {
     antiguo.close();

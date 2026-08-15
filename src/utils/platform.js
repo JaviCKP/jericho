@@ -1,5 +1,5 @@
 const os = require('os');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
@@ -8,8 +8,8 @@ const isLinux = process.platform === 'linux';
 function isElevated() {
   if (isWindows) {
     try {
-      execSync('net session', { stdio: 'ignore' });
-      return true;
+      const result = spawnSync('net.exe', ['session'], { stdio: 'ignore', windowsHide: true });
+      return result.status === 0;
     } catch (e) {
       return false;
     }

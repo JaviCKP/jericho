@@ -14,7 +14,11 @@
  *     Es defensa en profundidad para secretos que el servidor no conoce.
  */
 
-const MIN_SECRET_LEN = 8;
+// No hay longitud mínima: incluso un secreto de un carácter debe quedar
+// cubierto. Para esos valores la sustitución es deliberadamente global; es la
+// única garantía demostrable de no fuga (y el llamador debe evitar registrar
+// secretos de un carácter salvo cuando sea imprescindible).
+const MIN_SECRET_LEN = 1;
 
 /** Nombres de variables de entorno que se consideran secretas. */
 const SENSITIVE_NAME_RE =
@@ -61,6 +65,26 @@ const PATTERNS = [
 
 /** Valores literales que hay que borrar siempre (se rellena en `init`). */
 let literalSecrets = [];
+let secretVariants = [];
+
+function variantsFor(secret) {
+  const variants = new Set([secret]);
+  try {
+    variants.add(encodeURIComponent(secret));
+    variants.add(JSON.stringify(secret));
+    variants.add(JSON.stringify(secret).slice(1, -1));
+    variants.add(Buffer.from(secret, 'utf8').toString('base64'));
+  } catch (_) { /* valores de texto normales; ignorar codificaciones imposibles */ }
+  return [...variants].filter((v) => typeof v === 'string' && v.length > 0);
+}
+
+function rebuildVariants() {
+  const rows = [];
+  for (const secret of literalSecrets) {
+    for (const variant of variantsFor(secret)) rows.push({ variant, secret });
+  }
+  secretVariants = rows.sort((a, b) => b.variant.length - a.variant.length);
+}
 
 /**
  * Registra los valores exactos a redactar. Se llama al arrancar con el entorno
@@ -79,6 +103,7 @@ function init(env = process.env, extraValues = []) {
   }
   // Los más largos primero: evita que un prefijo corto rompa el reemplazo de uno largo.
   literalSecrets = [...values].sort((a, b) => b.length - a.length);
+  rebuildVariants();
   return literalSecrets.length;
 }
 
@@ -87,6 +112,7 @@ function registerSecretValue(value) {
   if (literalSecrets.includes(value)) return false;
   literalSecrets.push(value);
   literalSecrets.sort((a, b) => b.length - a.length);
+  rebuildVariants();
   return true;
 }
 
@@ -98,15 +124,17 @@ function escapeRe(s) {
 function redactText(input) {
   if (typeof input !== 'string' || input.length === 0) return input;
   let out = input;
-  for (const secret of literalSecrets) {
-    if (out.includes(secret)) {
-      out = out.split(secret).join('[REDACTED:env-secret]');
-    }
-    // Variante base64 (usada por cabeceras Basic y por payloads codificados)
-    const b64 = Buffer.from(secret, 'utf8').toString('base64');
-    if (b64.length >= 12 && out.includes(b64)) {
-      out = out.split(b64).join('[REDACTED:env-secret-b64]');
-    }
+  // Una sola pasada evita que los marcadores se vuelvan a modificar cuando
+  // otro secreto corto coincide con una letra de "[REDACTED...]".
+  if (secretVariants.length > 0) {
+    const byVariant = new Map(secretVariants.map(({ variant }) => [variant, true]));
+    const re = new RegExp(secretVariants.map(({ variant }) => escapeRe(variant)).join('|'), 'g');
+    out = out.replace(re, (match) => {
+      const b64 = Buffer.from(match, 'utf8').toString('base64');
+      return byVariant.has(b64) && b64 !== match
+        ? '[REDACTED:env-secret-encoded]'
+        : '[REDACTED:env-secret]';
+    });
   }
   for (const [re, repl] of PATTERNS) {
     out = out.replace(re, repl);
@@ -121,6 +149,14 @@ function redactValue(value, depth = 0) {
   if (typeof value === 'string') return redactText(value);
   if (typeof value === 'number' || typeof value === 'boolean') return value;
   if (Buffer.isBuffer(value)) return `[binary ${value.length} bytes]`;
+  if (value instanceof Error) {
+    return {
+      name: redactText(value.name),
+      message: redactText(value.message),
+      ...(value.stack ? { stack: redactText(value.stack) } : {}),
+      ...(value.code ? { code: value.code } : {}),
+    };
+  }
   if (Array.isArray(value)) return value.map((v) => redactValue(v, depth + 1));
   if (typeof value === 'object') {
     const out = {};
@@ -172,7 +208,7 @@ function redactUrl(raw) {
  */
 function containsKnownSecret(text) {
   if (typeof text !== 'string') return false;
-  return literalSecrets.some((s) => text.includes(s));
+  return secretVariants.some(({ variant }) => text.includes(variant));
 }
 
 function knownSecretCount() {
@@ -182,6 +218,7 @@ function knownSecretCount() {
 /** Sólo para pruebas: limpia el estado. */
 function _reset() {
   literalSecrets = [];
+  secretVariants = [];
 }
 
 module.exports = {

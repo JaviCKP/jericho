@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 const { GhostError, CODES } = require('../errors');
 const { resolveProgram, validateArgs, assertSubcommandAllowed, buildChildEnv } = require('./program');
 const redact = require('../redact');
+const { isElevated } = require('../../utils/platform');
 
 const isWindows = process.platform === 'win32';
 
@@ -65,6 +66,20 @@ class ExecRunner {
    * EXACTAMENTE lo que se ejecutaría sin ejecutarlo.
    */
   plan({ program, args = [], cwd, secretNames = [] }) {
+    if (isElevated()) {
+      throw new GhostError(
+        CODES.COMMAND_NOT_ALLOWED,
+        'El servidor estÃ¡ elevado; se rechazan procesos hijos generales al no existir aislamiento de privilegios demostrable.',
+        { details: { reason: 'elevated_server_no_child_isolation' } }
+      );
+    }
+    if (secretNames.length > 0) {
+      throw new GhostError(
+        CODES.SECRET_NOT_ALLOWED,
+        'No se entregan secretos a procesos hijos generales: no hay aislamiento de red del sistema operativo.',
+        { details: { reason: 'child_network_unrestricted' }, remediation: 'Usa una acciÃ³n operator-defined con red restringida.' }
+      );
+    }
     const resolved = resolveProgram(program, this.policy.exec);
     // La validación estricta de metacaracteres SÓLO aplica a lanzadores .cmd/.bat
     // de Windows, que obligan a pasar por cmd.exe. Ver src/core/exec/program.js.

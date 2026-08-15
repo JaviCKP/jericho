@@ -166,11 +166,18 @@ class PolicyEngine {
     let approval = 'not_required';
     let grant = null;
     if (effective >= this.approvalAt) {
+      if (!session.user_id || !session.project_id) {
+        throw new GhostError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
+      }
       grant = this.findStandingGrant(tool, effective, effects);
       if (grant) {
         approval = 'standing_grant';
       } else if (approvalId) {
-        this.approvals.consume(approvalId, tool, args); // lanza si no es válida
+        this.approvals.consume(approvalId, tool, args, {
+          session_id: session.session_id,
+          user_id: session.user_id,
+          project_id: session.project_id,
+        }); // lanza si no es válida
         approval = `explicit:${approvalId}`;
       } else {
         const req = this.approvals.request({
@@ -181,6 +188,8 @@ class PolicyEngine {
           summary: summary || `${tool} (${riskName(effective)})`,
           sessionId,
           projectId: session.project_id || null,
+          userId: session.user_id || null,
+          operation: tool,
           effects,
         });
         if (this.metrics) this.metrics.bump('approvals_requested');

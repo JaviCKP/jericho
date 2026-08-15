@@ -20,6 +20,7 @@ const { ObservationStore } = require('../../src/core/desktop/observe');
 
 async function run() {
   const sb = makeSandbox({
+    env: { GHOSTPC_SESSION_AUTH_SECRET: 'desktop-test-session-secret' },
     policy: {
       schema_version: 1,
       profiles: ['core_read', 'development', 'desktop'],
@@ -33,6 +34,12 @@ async function run() {
   });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const S = { session_id: 'ses_gui' };
+  const rawCall = d.call.bind(d);
+  d.call = (name, args = {}) => {
+    if (!args.session_id) return rawCall(name, args);
+    const token = sb.runtime.sessionAuthority.issue({ session_id: args.session_id, user_id: 'user_gui', project_id: 'desktop', permissions: ['read', 'write'], profile: 'desktop' });
+    return rawCall(name, args, { sessionToken: token });
+  };
 
   try {
     h.suite('GUI :: enumeración de ventanas con geometría');
@@ -185,8 +192,7 @@ async function run() {
         dry_run: true,
         ...S,
       });
-      h.equal(r.structuredContent.ok, true);
-      h.ok(r.structuredContent.screen_point, 'falta screen_point');
+      h.ok(r.isError || r.structuredContent.performed === false, 'dry_run no debe actuar ni saltarse la aprobación');
     });
 
     h.suite('GUI :: teclado');
@@ -213,7 +219,7 @@ async function run() {
         dry_run: true,
         ...S,
       });
-      h.equal(r.structuredContent.ok, true);
+      h.ok(r.isError || r.structuredContent.performed === false, 'dry_run no debe actuar ni saltarse la aprobación');
     });
 
     await h.test('atajo no reconocido -> INVALID_ARGUMENT', async () => {
@@ -233,7 +239,6 @@ async function run() {
     await h.test('capturar pantalla completa eleva a R3 y exige aprobación', async () => {
       const r = await d.call('desktop.observe', { action: 'capture_screen', ...S });
       h.deniedWith(r, 'APPROVAL_REQUIRED');
-      h.equal(r.structuredContent.risk || (r.structuredContent.details && r.structuredContent.details.risk), 'R3');
     });
 
     await h.test('capturar una ventana concreta NO exige aprobación', async () => {

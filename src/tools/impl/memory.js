@@ -101,7 +101,7 @@ const resume = {
     }
     const item = memory.get(args.project_id, args.id);
     const project = memory.getProject(args.project_id);
-    const git = new Git(runner);
+    const git = new Git(runner, roots);
 
     const briefing = await buildResume({
       item,

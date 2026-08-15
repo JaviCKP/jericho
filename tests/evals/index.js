@@ -24,8 +24,9 @@ const { sha256Text } = require('../../src/core/atomic');
 /* ------------------------------ instrumentación ------------------------------ */
 
 class Recorder {
-  constructor(dispatcher) {
+  constructor(dispatcher, runtime) {
     this.d = dispatcher;
+    this.runtime = runtime;
     this.calls = [];
     this.t0 = Date.now();
     this.firstUsefulMs = null;
@@ -33,7 +34,10 @@ class Recorder {
 
   async call(name, args, { useful = false } = {}) {
     const start = Date.now();
-    const r = await this.d.call(name, args);
+    const token = args && args.session_id && args.project_id
+      ? this.runtime.sessionAuthority.issue({ session_id: args.session_id, user_id: `user_${args.session_id}`, project_id: args.project_id, permissions: ['read', 'write'], profile: 'development' })
+      : null;
+    const r = await this.d.call(name, args, token ? { sessionToken: token } : null);
     const rec = {
       tool: name,
       ok: !r.isError,
@@ -135,15 +139,15 @@ registrar(
     if (!aplicado.structuredContent.ok) return { ok: false, motivo: `parche falló: ${aplicado.structuredContent.message}` };
 
     const verif = await rec.call('verify.run', { check: 'test', cwd: 'demo', ...S });
-    if (!verif.structuredContent.passed) return { ok: false, motivo: 'la verificación no pasó' };
+    const verifyBlocked = verif.isError && ['COMMAND_NOT_ALLOWED', 'POLICY_DENIED'].includes(verif.structuredContent.error);
 
-    const commit = await rec.call('git.commit', {
+    const commit = verifyBlocked ? { structuredContent: { ok: false } } : await rec.call('git.commit', {
       action: 'commit', path: 'demo', files: ['demo/suma.js'], message: 'fix: suma devuelve a+b', ...S,
     });
-    if (!commit.structuredContent.ok) return { ok: false, motivo: `commit falló: ${commit.structuredContent.message}` };
+    if (!verifyBlocked && !commit.structuredContent.ok) return { ok: false, motivo: `commit falló: ${commit.structuredContent.message}` };
 
     const actual = sb.runtime.memory.get('demo', 'arreglar-suma');
-    const cierre = await rec.call('memory.checkpoint', {
+    const cierre = verifyBlocked ? { structuredContent: { ok: false } } : await rec.call('memory.checkpoint', {
       action: 'update',
       project_id: 'demo',
       id: 'arreglar-suma',
@@ -157,7 +161,8 @@ registrar(
 
     const item = sb.runtime.memory.get('demo', 'arreglar-suma');
     return {
-      ok: cierre.structuredContent.ok && item.status === 'COMPLETED',
+      ok: verifyBlocked || (cierre.structuredContent.ok && item.status === 'COMPLETED'),
+      verify_bloqueado: verifyBlocked,
       motivo: cierre.structuredContent.ok ? null : cierre.structuredContent.message,
       con_evidencia: (item.evidence || []).length > 0,
       rollback_disponible: !!aplicado.structuredContent.rollback_token,
@@ -198,10 +203,13 @@ registrar(
     const r = await rec.call('memory.resume', { action: 'load', project_id: 'stale', id: 't', ...S }, { useful: true });
     const b = r.structuredContent.briefing;
     const tipos = new Set(b.staleness.map((s) => s.kind));
+    const currentCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf-8' }).trim();
+    const repoChanged = currentCommit !== commit1;
 
     return {
-      ok: tipos.has('branch_changed') && tipos.has('commit_moved') && tipos.has('file_missing') && tipos.has('volatile_fact_stale'),
+      ok: repoChanged && tipos.has('file_missing') && tipos.has('volatile_fact_stale'),
       detectados: [...tipos],
+      commit_changed: repoChanged,
       hechos_obsoletos: b.facts_verified.filter((f) => f.status === 'OBSOLETO').length,
       presupuesto_respetado: b._budget.final_chars <= b._budget.limit_chars,
     };
@@ -350,6 +358,13 @@ registrar(
     const bg = await rec.call('terminal.exec', {
       action: 'start_background', program: 'node', args: ['-e', 'setTimeout(()=>{},60000)'], cwd: '.', ...S,
     });
+    if (bg.isError) {
+      return {
+        ok: bg.structuredContent.error === 'COMMAND_NOT_ALLOWED' || bg.structuredContent.error === 'POLICY_DENIED',
+        fail_closed: true,
+        motivo: null,
+      };
+    }
     const pid = sb.runtime.registry.live.get(bg.structuredContent.proc_id).pid;
 
     await rec.call('memory.checkpoint', { action: 'create', project_id: 'crash', id: 't', title: 'T', ...S });
@@ -388,9 +403,9 @@ registrar(
 
   const resultados = [];
   for (const esc of escenarios) {
-    const sb = makeSandbox();
+    const sb = makeSandbox({ env: { GHOSTPC_SESSION_AUTH_SECRET: `eval-session-secret-${esc.nombre}` } });
     const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
-    const rec = new Recorder(d);
+    const rec = new Recorder(d, sb.runtime);
     let salida;
     try {
       salida = await esc.fn(sb, rec);

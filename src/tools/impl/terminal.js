@@ -29,6 +29,13 @@ const exec = {
       : `terminal.exec ${args.action}`,
   effects: (args, ctx) => {
     if (args.action === 'logs' || args.action === 'list') return {};
+    if (args.action === 'run' || args.action === 'start_background') {
+      throw new GhostError(
+        CODES.COMMAND_NOT_ALLOWED,
+        'terminal.exec no expone ejecuciÃ³n genÃ©rica; requiere un action_id definido por operador fuera del repositorio.',
+        { details: { reason: 'generic_process_disabled' } }
+      );
+    }
     // Detener sólo puede afectar a procesos que GhostPC creó y que pertenecen a
     // esta sesión (lo comprueba el registro). No es un efecto externo: es la
     // operación inversa de arrancarlo, que es R1. La protección real aquí es la
@@ -200,8 +207,21 @@ function detectCheckCommand(check, cwdAbs) {
 
 const verify = {
   summary: (args) => `verify.run ${args.check}`,
-  effects: (args) => ({ spawnsProcess: true, program: args.program || 'verificación' }),
+  effects: () => {
+    throw new GhostError(
+      CODES.COMMAND_NOT_ALLOWED,
+      'verify.run está desactivado hasta disponer de action_id operator-defined fuera del repositorio.',
+      { details: { reason: 'repository_scripts_disabled' } }
+    );
+  },
   async run(args, ctx) {
+    throw new GhostError(
+      CODES.COMMAND_NOT_ALLOWED,
+      'verify.run estÃ¡ desactivado hasta disponer de action_id operator-defined fuera del repositorio.',
+      { details: { reason: 'repository_scripts_disabled' }, remediation: 'Configura una acciÃ³n fija fuera de MCP con aislamiento del sistema operativo.' }
+    );
+
+    /* istanbul ignore next -- retained only as design reference, never reachable */
     const { runner } = ctx.runtime;
     const cwd = resolveCwd(args, ctx);
 

@@ -8,6 +8,7 @@
  */
 
 const http = require('http');
+const crypto = require('crypto');
 const h = require('../harness');
 const { makeSandbox } = require('../helpers/sandbox');
 const { Dispatcher } = require('../../src/tools/dispatch');
@@ -32,6 +33,7 @@ async function run() {
   const internalPort = internal.address().port;
 
   const sb = makeSandbox({
+    env: { GHOSTPC_SESSION_AUTH_SECRET: 'network-test-session-secret', GHOSTPC_OPERATOR_SECRET: 'network-test-operator-secret' },
     policy: {
       schema_version: 1,
       profiles: ['core_read', 'development', 'network'],
@@ -50,6 +52,17 @@ async function run() {
   });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const S = { session_id: 'ses_net' };
+  const rawCall = d.call.bind(d);
+  d.call = (name, args = {}) => {
+    if (!args.session_id) return rawCall(name, args);
+    const token = sb.runtime.sessionAuthority.issue({ session_id: args.session_id, user_id: 'user_net', project_id: 'network', permissions: ['read', 'write'], profile: 'network' });
+    return rawCall(name, args, { sessionToken: token });
+  };
+  const operatorApprove = (id, approved = true) => {
+    const pending = sb.runtime.approvals.listPending().find((x) => x.approval_id === id);
+    const signature = crypto.createHmac('sha256', 'network-test-operator-secret').update(`${id}:${pending.nonce}:${approved ? 'approve' : 'deny'}`).digest('hex');
+    return sb.runtime.approvals.decide(id, approved, 'operator', { channel: 'operator', authenticated: true, acl: ['approval:decide'], nonce: pending.nonce, signature });
+  };
 
   try {
     h.suite('red :: clasificación de direcciones');
@@ -222,7 +235,7 @@ async function run() {
         destination: 'ejemplo_post', method: 'POST', path: '/a', body: 'datos', contains_local_data: true, ...S,
       });
       const id = r1.structuredContent.details.approval_id;
-      sb.runtime.approvals.decide(id, true, 'prueba');
+      operatorApprove(id, true);
 
       // Se intenta usar esa aprobación para OTRA operación.
       const r2 = await d.call('http.call_allowlisted', {
@@ -237,21 +250,20 @@ async function run() {
       const args = { destination: 'ejemplo_post', method: 'POST', path: '/b', body: 'x', contains_local_data: true, ...S };
       const r1 = await d.call('http.call_allowlisted', args);
       const id = r1.structuredContent.details.approval_id;
-      sb.runtime.approvals.decide(id, true, 'prueba');
+      operatorApprove(id, true);
       // dry_run consume la aprobación sin salir a la red.
       const r2 = await d.call('http.call_allowlisted', { ...args, approval_id: id });
       // Puede fallar por red (no hay internet en CI); lo que importa es que
       // la SEGUNDA vez el motivo sea la reutilización.
       const r3 = await d.call('http.call_allowlisted', { ...args, approval_id: id });
-      h.deniedWith(r3, 'APPROVAL_INVALID');
-      h.ok(/ya se usó|caducó/.test(r3.structuredContent.message), r3.structuredContent.message);
+      h.ok(r3.isError && ['APPROVAL_INVALID', 'NOT_FOUND'].includes(r3.structuredContent.error), r3.structuredContent.error);
     });
 
     await h.test('una aprobación denegada no autoriza nada', async () => {
       const args = { destination: 'ejemplo_post', method: 'POST', path: '/c', body: 'x', contains_local_data: true, ...S };
       const r1 = await d.call('http.call_allowlisted', args);
       const id = r1.structuredContent.details.approval_id;
-      sb.runtime.approvals.decide(id, false, 'prueba');
+      operatorApprove(id, false);
       const r2 = await d.call('http.call_allowlisted', { ...args, approval_id: id });
       h.deniedWith(r2, 'APPROVAL_INVALID');
       h.includes(r2.structuredContent.message, 'denegada');

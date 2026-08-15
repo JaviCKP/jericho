@@ -93,6 +93,11 @@ async function main() {
 
   /** Versión de protocolo negociada; se captura interceptando el initialize. */
   let negotiatedVersion = null;
+  const mcpTrustedContext = () => {
+    const token = process.env.GHOSTPC_MCP_SESSION_TOKEN;
+    if (!token) return null;
+    try { return runtime.sessionAuthority.authenticate(token); } catch (e) { return null; }
+  };
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools = dispatcher.listTools();
@@ -108,20 +113,23 @@ async function main() {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const result = await dispatcher.call(name, args);
+    const token = process.env.GHOSTPC_MCP_SESSION_TOKEN;
+    const result = await dispatcher.call(name, args, token ? { sessionToken: token } : null);
     if (supportsStructured(negotiatedVersion)) return result;
     // Cliente antiguo: sólo contenido textual.
     const { structuredContent, ...rest } = result;
     return rest;
   });
 
-  server.setRequestHandler(ListResourcesRequestSchema, async () => listResources(runtime));
+  server.setRequestHandler(ListResourcesRequestSchema, async () => listResources(runtime, mcpTrustedContext()));
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => listResourceTemplates());
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => readResource(runtime, request.params.uri));
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => readResource(runtime, request.params.uri, mcpTrustedContext()));
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: PROMPTS }));
-  server.setRequestHandler(GetPromptRequestSchema, async (request) =>
-    getPrompt(runtime, request.params.name, request.params.arguments || {})
-  );
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const context = mcpTrustedContext();
+    if (!context) throw new Error('Prompt sensible requiere contexto autenticado fuera de banda.');
+    return getPrompt(runtime, request.params.name, { ...(request.params.arguments || {}), project_id: context.project_id, session_id: context.session_id });
+  });
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

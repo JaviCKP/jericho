@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const h = require('../harness');
 const { makeSandbox } = require('../helpers/sandbox');
 const { Dispatcher } = require('../../src/tools/dispatch');
@@ -27,9 +28,18 @@ function diff(file, before, after) {
 }
 
 async function run() {
-  const sb = makeSandbox();
+  const sb = makeSandbox({ env: { GHOSTPC_SESSION_AUTH_SECRET: 'patch-test-session-secret', GHOSTPC_OPERATOR_SECRET: 'patch-test-operator-secret' } });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const S = { session_id: 'ses_patch' };
+  const callAs = (name, args, project = 'patch') => {
+    const token = sb.runtime.sessionAuthority.issue({ session_id: S.session_id, user_id: 'user_patch', project_id: project, permissions: ['read', 'write'], profile: 'development' });
+    return d.call(name, args, { sessionToken: token });
+  };
+  const operatorApprove = (id, approved = true) => {
+    const pending = sb.runtime.approvals.listPending().find((x) => x.approval_id === id);
+    const signature = crypto.createHmac('sha256', 'patch-test-operator-secret').update(`${id}:${pending.nonce}:${approved ? 'approve' : 'deny'}`).digest('hex');
+    return sb.runtime.approvals.decide(id, approved, 'operator', { channel: 'operator', authenticated: true, acl: ['approval:decide'], nonce: pending.nonce, signature });
+  };
 
   try {
     h.suite('parches :: aplicación básica');
@@ -48,7 +58,7 @@ async function run() {
     let token;
     await h.test('aplicación real y rollback_token', async () => {
       const p = diff('src/app.js', 'const a = 1;\nconst b = 2;\n', 'const a = 10;\nconst b = 2;\n');
-      const r = await d.call('workspace.apply_patch', { patch: p, ...S });
+      const r = await callAs('workspace.apply_patch', { patch: p, ...S });
       h.equal(r.structuredContent.ok, true, r.structuredContent.message);
       h.equal(r.structuredContent.applied, true);
       h.includes(sb.read('src/app.js'), 'const a = 10;');
@@ -57,7 +67,7 @@ async function run() {
     });
 
     await h.test('rollback restaura el contenido exacto anterior', async () => {
-      const r = await d.call('workspace.rollback', { rollback_token: token, ...S });
+      const r = await callAs('workspace.rollback', { rollback_token: token, ...S });
       h.equal(r.structuredContent.ok, true, r.structuredContent.message);
       h.equal(sb.read('src/app.js'), 'const a = 1;\nconst b = 2;\n');
     });
@@ -107,7 +117,7 @@ async function run() {
       const original = 'A\nX\nB\nA\nX\nB\n';
       sb.write('src/dup.js', original);
       const p = ['--- a/src/dup.js', '+++ b/src/dup.js', '@@ -1,3 +1,3 @@', ' A', '-X', '+Y', ' B', ''].join('\n');
-      const r = await d.call('workspace.apply_patch', { patch: p, ...S });
+      const r = await callAs('workspace.apply_patch', { patch: p, ...S });
       h.deniedWith(r, 'PATCH_AMBIGUOUS');
       h.equal(sb.read('src/dup.js'), original, 'se modificó pese a ser ambiguo');
     });
@@ -120,7 +130,7 @@ async function run() {
         '--- a/src/dup2.js', '+++ b/src/dup2.js', '@@ -1,6 +1,6 @@',
         ' A', '-X', '+Y', ' B', ' A', ' X', ' B', '',
       ].join('\n');
-      const r = await d.call('workspace.apply_patch', { patch: p, ...S });
+      const r = await callAs('workspace.apply_patch', { patch: p, ...S });
       h.equal(r.structuredContent.ok, true, r.structuredContent.message);
       h.equal(sb.read('src/dup2.js'), 'A\nY\nB\nA\nX\nB\n');
     });
@@ -164,17 +174,17 @@ async function run() {
 
     await h.test('un parche que borra archivos se clasifica como destructivo (R3)', async () => {
       const p = ['--- a/src/nuevo.js', '+++ /dev/null', '@@ -1,2 +0,0 @@', '-linea A', '-linea B', ''].join('\n');
-      const r = await d.call('workspace.apply_patch', { patch: p, ...S });
+      const r = await callAs('workspace.apply_patch', { patch: p, ...S });
       h.deniedWith(r, 'APPROVAL_REQUIRED');
       h.equal(sb.exists('src/nuevo.js'), true, 'se borró sin aprobación');
     });
 
     await h.test('con aprobación humana, el borrado se ejecuta', async () => {
       const p = ['--- a/src/nuevo.js', '+++ /dev/null', '@@ -1,2 +0,0 @@', '-linea A', '-linea B', ''].join('\n');
-      const r1 = await d.call('workspace.apply_patch', { patch: p, ...S });
+      const r1 = await callAs('workspace.apply_patch', { patch: p, ...S });
       const id = r1.structuredContent.details.approval_id;
-      sb.runtime.approvals.decide(id, true, 'prueba');
-      const r2 = await d.call('workspace.apply_patch', { patch: p, approval_id: id, ...S });
+      operatorApprove(id, true);
+      const r2 = await callAs('workspace.apply_patch', { patch: p, approval_id: id, ...S });
       h.equal(r2.structuredContent.ok, true, r2.structuredContent.message);
       h.equal(sb.exists('src/nuevo.js'), false);
     });

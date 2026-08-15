@@ -29,7 +29,7 @@ class SecretBroker {
     // si alguna vez apareciese en un stdout, un diff o un log, saldría tachado.
     for (const name of this.allowed) {
       const v = this.env[name];
-      if (typeof v === 'string' && v.length >= 8) redact.registerSecretValue(v);
+      if (typeof v === 'string' && v.length > 0) redact.registerSecretValue(v);
     }
   }
 
@@ -112,7 +112,7 @@ class SecretBroker {
   assertNoLeak(text, where = 'respuesta') {
     for (const name of this.allowed) {
       const v = this.env[name];
-      if (typeof v === 'string' && v.length >= 8 && typeof text === 'string' && text.includes(v)) {
+      if (typeof v === 'string' && v.length > 0 && typeof text === 'string' && redact.containsKnownSecret(text)) {
         if (this.metrics) this.metrics.bump('secrets_blocked');
         throw new GhostError(
           CODES.SECRET_VALUE_NEVER_RETURNED,

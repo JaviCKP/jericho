@@ -80,7 +80,24 @@ function cmdApprove(runtime, argv) {
     console.error('Falta el approval_id.');
     return 1;
   }
-  const rec = approvals.decide(id, approve, whoami());
+  const pending = approvals.listPending().find((a) => a.approval_id === id);
+  if (!pending) {
+    console.error('No hay una solicitud pendiente con ese approval_id.');
+    return 1;
+  }
+  const operatorSecret = process.env.GHOSTPC_OPERATOR_SECRET;
+  if (!operatorSecret) {
+    console.error('GHOSTPC_OPERATOR_SECRET no está configurado; no se puede autenticar el canal de operador.');
+    return 1;
+  }
+  const signature = require('crypto').createHmac('sha256', operatorSecret).update(`${id}:${pending.nonce}:${approve ? 'approve' : 'deny'}`).digest('hex');
+  const rec = approvals.decide(id, approve, whoami(), {
+    channel: 'operator',
+    authenticated: true,
+    acl: ['approval:decide'],
+    nonce: pending.nonce,
+    signature,
+  });
   console.log(`${approve ? 'APROBADA' : 'DENEGADA'}: ${rec.approval_id} (${rec.tool}, ${rec.risk})`);
   if (approve) {
     console.log('El agente ya puede repetir la llamada con approval_id="' + rec.approval_id + '".');

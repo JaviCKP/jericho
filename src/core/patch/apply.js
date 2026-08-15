@@ -245,7 +245,7 @@ function applyPatch({ patch, roots, root, expected_hashes = {}, dryRun = false, 
 
   // Escritura atómica archivo a archivo, con rollback si alguna falla.
   const written = [];
-  const rollback = staged.map((s) => ({ absolute: s.absolute, before: s.before, existed: s.before_hash !== null }));
+  const rollback = staged.map((s) => ({ absolute: s.absolute, before: s.before, existed: s.before_hash !== null, before_hash: s.before_hash, after_hash: s.after_hash }));
   try {
     for (const s of staged) {
       if (s.operation === 'delete') {

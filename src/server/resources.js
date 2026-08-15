@@ -61,11 +61,19 @@ const TEMPLATES = [
   },
 ];
 
-function listResources(runtime) {
+function requireContext(runtime, context) {
+  if (!context || context.session_id === 'anon' || !context.user_id || !context.project_id) {
+    throw new GhostError(CODES.POLICY_DENIED, 'Recurso sensible requiere contexto autenticado.');
+  }
+  return context;
+}
+
+function listResources(runtime, context) {
+  requireContext(runtime, context);
   const dynamic = [];
   try {
     const index = runtime.memory.readIndex();
-    for (const p of index.projects) {
+    for (const p of index.projects.filter((p) => p.project_id === context.project_id)) {
       for (const item of p.items.slice(0, 50)) {
         dynamic.push({
           uri: `ghostpc://memory/${p.project_id}/${item.id}`,
@@ -89,12 +97,14 @@ function json(uri, value) {
   return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(redact.redactValue(value), null, 2) }] };
 }
 
-function readResource(runtime, uri) {
+function readResource(runtime, uri, context) {
+  requireContext(runtime, context);
   if (uri === 'ghostpc://policy') {
     return json(uri, runtime.engine.describe());
   }
   if (uri === 'ghostpc://memory/index') {
-    return json(uri, runtime.memory.readIndex());
+    const index = runtime.memory.readIndex();
+    return json(uri, { ...index, projects: index.projects.filter((p) => p.project_id === context.project_id) });
   }
   if (uri === 'ghostpc://rules') {
     return json(uri, {
@@ -104,15 +114,18 @@ function readResource(runtime, uri) {
     });
   }
   if (uri === 'ghostpc://activity') {
+    const recent = runtime.journal.tail(60).filter((e) => e.session_id === context.session_id && e.project_id === context.project_id);
     return json(uri, {
       chain: runtime.journal.verify(),
-      metrics: runtime.metrics.snapshot(),
-      recent: runtime.journal.tail(60),
+      // Métricas globales no se exponen: no existe un contador seguro por
+      // sesión en este recurso y mezclarlo rompe aislamiento A/B.
+      metrics: { scoped: true },
+      recent,
     });
   }
   if (uri === 'ghostpc://approvals') {
     return json(uri, {
-      pending: runtime.approvals.listPending(),
+      pending: runtime.approvals.listPending().filter((a) => a.session_id === context.session_id && a.user_id === context.user_id && a.project_id === context.project_id),
       how_to_approve: 'npm run approve -- <approval_id>',
     });
   }
@@ -120,6 +133,7 @@ function readResource(runtime, uri) {
   const m = uri.match(/^ghostpc:\/\/memory\/([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)(\/markdown)?$/);
   if (m) {
     const [, projectId, itemId, asMarkdown] = m;
+    if (projectId !== context.project_id) throw new GhostError(CODES.POLICY_DENIED, 'El recurso pertenece a otro proyecto.');
     const item = runtime.memory.get(projectId, itemId);
     if (asMarkdown) {
       const { renderWorkItemMarkdown } = require('../core/memory/render');

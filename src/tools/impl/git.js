@@ -41,7 +41,7 @@ function repoRelative(file, repo, args, ctx) {
 const inspect = {
   effects: () => ({ spawnsProcess: true, program: 'git' }),
   async run(args, ctx) {
-    const git = new Git(ctx.runtime.runner);
+    const git = new Git(ctx.runtime.runner, ctx.runtime.roots);
     const repo = repoPath(args, ctx);
     const gctx = { session: ctx.session, traceId: ctx.trace_id, tool: 'git.inspect' };
 
@@ -108,7 +108,7 @@ const commit = {
     externalEffect: false,
   }),
   async run(args, ctx) {
-    const git = new Git(ctx.runtime.runner);
+    const git = new Git(ctx.runtime.runner, ctx.runtime.roots);
     const repo = repoPath(args, ctx);
     const gctx = { session: ctx.session, traceId: ctx.trace_id, tool: 'git.commit' };
 

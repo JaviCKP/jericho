@@ -5,6 +5,7 @@ const path = require('path');
 const { newApprovalId, fingerprint } = require('../ids');
 const { GhostError, CODES } = require('../errors');
 const redact = require('../redact');
+const crypto = require('crypto');
 
 /**
  * Aprobaciones fuera de banda.
@@ -25,7 +26,7 @@ const redact = require('../redact');
 const DEFAULT_TTL_MS = 15 * 60 * 1000; // 15 min
 
 class ApprovalStore {
-  constructor(dir, { ttlMs = DEFAULT_TTL_MS, journal = null } = {}) {
+  constructor(dir, { ttlMs = DEFAULT_TTL_MS, journal = null, operatorSecret = null } = {}) {
     this.dir = dir;
     this.pendingDir = path.join(dir, 'pending');
     this.decidedDir = path.join(dir, 'decided');
@@ -33,6 +34,7 @@ class ApprovalStore {
     fs.mkdirSync(this.decidedDir, { recursive: true });
     this.ttlMs = ttlMs;
     this.journal = journal;
+    this.operatorSecret = operatorSecret || process.env.GHOSTPC_OPERATOR_SECRET || null;
   }
 
   _file(dir, id) {
@@ -43,7 +45,7 @@ class ApprovalStore {
   }
 
   /** Crea una solicitud pendiente. Devuelve el id y el resumen. */
-  request({ tool, args, risk, reason, summary, sessionId, projectId, effects }) {
+  request({ tool, args, risk, reason, summary, sessionId, projectId, userId, operation, files, beforeHash, afterHash, effects }) {
     const id = newApprovalId();
     const fp = fingerprint(tool, args);
     const record = {
@@ -55,6 +57,12 @@ class ApprovalStore {
       summary,
       session_id: sessionId || null,
       project_id: projectId || null,
+      user_id: userId || null,
+      operation: operation || tool,
+      files: files || [],
+      before_hash: beforeHash || null,
+      after_hash: afterHash || null,
+      nonce: crypto.randomBytes(16).toString('hex'),
       effects: redact.redactValue(effects || {}),
       args_redacted: redact.redactValue(args),
       created_at: new Date().toISOString(),
@@ -84,17 +92,28 @@ class ApprovalStore {
   }
 
   /** Decisión humana. `by` identifica quién decidió (usuario del SO). */
-  decide(id, approved, by) {
+  decide(id, approved, by, operatorContext = null) {
+    if (!operatorContext || operatorContext.channel !== 'operator' || operatorContext.authenticated !== true || !Array.isArray(operatorContext.acl) || !operatorContext.acl.includes('approval:decide') || !operatorContext.nonce || !this.operatorSecret) {
+      throw new GhostError(CODES.POLICY_DENIED, 'La aprobación requiere el canal de operador autenticado y ACL válida.');
+    }
     const file = this._file(this.pendingDir, id);
     if (!fs.existsSync(file)) {
       throw new GhostError(CODES.APPROVAL_INVALID, `No hay ninguna solicitud pendiente con id '${id}'.`);
     }
     const record = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    if (operatorContext.nonce !== record.nonce) {
+      throw new GhostError(CODES.POLICY_DENIED, 'Nonce de operador no coincide con la solicitud.');
+    }
+    const signed = crypto.createHmac('sha256', this.operatorSecret).update(`${id}:${record.nonce}:${approved ? 'approve' : 'deny'}`).digest('hex');
+    if (operatorContext.signature !== signed) throw new GhostError(CODES.POLICY_DENIED, 'Autenticación de operador inválida.');
     record.status = approved ? 'APPROVED' : 'DENIED';
     record.decided_at = new Date().toISOString();
     record.decided_by = by || 'unknown';
-    fs.writeFileSync(this._file(this.decidedDir, id), JSON.stringify(record, null, 2), 'utf-8');
-    fs.unlinkSync(file);
+    const decidedFile = this._file(this.decidedDir, id);
+    try { fs.renameSync(file, decidedFile); } catch (e) {
+      throw new GhostError(CODES.APPROVAL_INVALID, 'La aprobación ya fue consumida o no está disponible.');
+    }
+    fs.writeFileSync(decidedFile, JSON.stringify(record, null, 2), 'utf-8');
     if (this.journal) {
       this.journal.append({
         kind: 'approval.decided',
@@ -111,7 +130,7 @@ class ApprovalStore {
    * Consume una aprobación para una operación concreta.
    * Falla si: no existe, no está aprobada, caducó, ya se usó, o la huella no coincide.
    */
-  consume(id, tool, args) {
+  consume(id, tool, args, context = {}) {
     const file = this._file(this.decidedDir, id);
     if (!fs.existsSync(file)) {
       // ¿Sigue pendiente?
@@ -126,6 +145,9 @@ class ApprovalStore {
     const record = JSON.parse(fs.readFileSync(file, 'utf-8'));
     if (record.status !== 'APPROVED') {
       throw new GhostError(CODES.APPROVAL_INVALID, `La aprobación '${id}' fue denegada por la persona.`);
+    }
+    for (const key of ['session_id', 'user_id', 'project_id']) {
+      if ((record[key] || null) !== (context[key] || null)) throw new GhostError(CODES.APPROVAL_INVALID, 'La aprobación no pertenece a esta sesión, usuario o proyecto.');
     }
     if (record.consumed_at) {
       throw new GhostError(CODES.APPROVAL_INVALID, `La aprobación '${id}' ya se usó el ${record.consumed_at}. Las aprobaciones son de un solo uso.`);
@@ -145,7 +167,9 @@ class ApprovalStore {
       );
     }
     record.consumed_at = new Date().toISOString();
-    fs.writeFileSync(file, JSON.stringify(record, null, 2), 'utf-8');
+    const consumed = `${file}.consumed`;
+    try { fs.renameSync(file, consumed); } catch (e) { throw new GhostError(CODES.APPROVAL_INVALID, 'La aprobación ya fue consumida de forma concurrente.'); }
+    fs.writeFileSync(consumed, JSON.stringify(record, null, 2), 'utf-8');
     if (this.journal) {
       this.journal.append({ kind: 'approval.consumed', approval_id: id, tool });
     }
