@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const diffLib = require('diff');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const { writeFileAtomic, sha256Text } = require('../atomic');
 
 /**
@@ -25,7 +25,7 @@ const { writeFileAtomic, sha256Text } = require('../atomic');
 function splitUnifiedDiff(patchText) {
   const parsed = diffLib.parsePatch(patchText);
   if (!parsed.length) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, 'El parche no contiene ningún diff unificado válido.', {
+    throw new JerichoError(CODES.INVALID_ARGUMENT, 'El parche no contiene ningún diff unificado válido.', {
       recoverable: true,
       remediation: 'Usa formato unified diff con cabeceras --- a/ruta y +++ b/ruta.',
     });
@@ -97,14 +97,14 @@ function applyPatch({ patch, roots, root, expected_hashes = {}, dryRun = false, 
   const filePatches = splitUnifiedDiff(patch);
 
   if (filePatches.length > maxFiles) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.LIMIT_EXCEEDED,
       `El parche toca ${filePatches.length} archivos; el límite es ${maxFiles}.`,
       { details: { files: filePatches.length, limit: maxFiles }, remediation: 'Divide el cambio en parches más pequeños.' }
     );
   }
   if (Buffer.byteLength(patch) > maxBytes) {
-    throw new GhostError(CODES.LIMIT_EXCEEDED, `El parche ocupa ${Buffer.byteLength(patch)} bytes; el límite es ${maxBytes}.`);
+    throw new JerichoError(CODES.LIMIT_EXCEEDED, `El parche ocupa ${Buffer.byteLength(patch)} bytes; el límite es ${maxBytes}.`);
   }
 
   const staged = [];
@@ -206,7 +206,7 @@ function applyPatch({ patch, roots, root, expected_hashes = {}, dryRun = false, 
 
   // TODO O NADA: si algo falla, no se escribe nada.
   if (problems.length) {
-    throw new GhostError(
+    throw new JerichoError(
       problems.length === 1 ? problems[0].code : CODES.PATCH_DID_NOT_APPLY,
       `El parche no se aplicó: ${problems.length} problema(s). No se ha modificado ningún archivo.`,
       {
@@ -221,7 +221,7 @@ function applyPatch({ patch, roots, root, expected_hashes = {}, dryRun = false, 
 
   const totalBytes = staged.reduce((n, s) => n + (s.after ? Buffer.byteLength(s.after) : 0), 0);
   if (totalBytes > maxBytes) {
-    throw new GhostError(CODES.LIMIT_EXCEEDED, `El resultado ocuparía ${totalBytes} bytes; el límite es ${maxBytes}.`);
+    throw new JerichoError(CODES.LIMIT_EXCEEDED, `El resultado ocuparía ${totalBytes} bytes; el límite es ${maxBytes}.`);
   }
 
   const preview = staged.map((s) => ({
@@ -265,7 +265,7 @@ function applyPatch({ patch, roots, root, expected_hashes = {}, dryRun = false, 
         /* mejor esfuerzo */
       }
     }
-    throw new GhostError(CODES.INTERNAL, `Fallo escribiendo el parche: ${err.message}. Se revirtieron los cambios ya escritos.`, {
+    throw new JerichoError(CODES.INTERNAL, `Fallo escribiendo el parche: ${err.message}. Se revirtieron los cambios ya escritos.`, {
       details: { written_before_failure: written },
     });
   }

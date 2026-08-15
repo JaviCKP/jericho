@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { glob } = require('glob');
 const crypto = require('crypto');
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 const { sha256Text } = require('../../core/atomic');
 const { applyPatch, rollbackPatch } = require('../../core/patch/apply');
 
@@ -155,7 +155,7 @@ const search = {
       try {
         regex = new RegExp(args.pattern, 'i');
       } catch (e) {
-        throw new GhostError(CODES.INVALID_ARGUMENT, `Expresión regular inválida: ${e.message}`, { recoverable: true });
+        throw new JerichoError(CODES.INVALID_ARGUMENT, `Expresión regular inválida: ${e.message}`, { recoverable: true });
       }
     }
     const needle = args.pattern.toLowerCase();
@@ -364,14 +364,14 @@ const rollback = {
   async run(args, ctx) {
     const entry = ctx.dispatcher.rollbacks.get(args.rollback_token);
     if (!entry) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.NOT_FOUND,
         `rollback_token '${args.rollback_token}' desconocido o caducado (los tokens duran 1 hora y no sobreviven a un reinicio).`,
         { recoverable: false, remediation: 'Usa git.inspect(diff) y genera un parche inverso.' }
       );
     }
     if (!ctx.session.user_id || !ctx.session.project_id || entry.expires_at < Date.now() || entry.session_id !== ctx.session.session_id || entry.user_id !== ctx.session.user_id || entry.project_id !== ctx.session.project_id) {
-      throw new GhostError(CODES.POLICY_DENIED, 'El rollback no pertenece a la sesión, usuario o proyecto autenticado.');
+      throw new JerichoError(CODES.POLICY_DENIED, 'El rollback no pertenece a la sesión, usuario o proyecto autenticado.');
     }
     // Compare-and-swap: any edit after apply is a conflict, never overwrite it.
     for (const state of entry.state) {
@@ -380,7 +380,7 @@ const rollback = {
       const currentHash = exists ? sha256Text(current) : null;
       const expected = state.after_hash || null;
       if ((expected !== null && currentHash !== expected) || (expected === null && !state.existed && exists)) {
-        throw new GhostError(CODES.REVISION_CONFLICT, 'CONFLICT: el archivo cambió después del parche; no se sobrescribió ningún dato.');
+        throw new JerichoError(CODES.REVISION_CONFLICT, 'CONFLICT: el archivo cambió después del parche; no se sobrescribió ningún dato.');
       }
     }
     const res = rollbackPatch(entry.state);

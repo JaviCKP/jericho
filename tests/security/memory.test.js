@@ -218,7 +218,7 @@ async function run() {
     });
 
     await h.test('no quedan temporales huérfanos tras una escritura fallida', () => {
-      const restos = fs.readdirSync(sb.memoryDir).filter((f) => f.includes('ghostpc-tmp'));
+      const restos = fs.readdirSync(sb.memoryDir).filter((f) => f.includes('jericho-tmp'));
       h.equal(restos.length, 0, `quedaron temporales: ${restos.join(', ')}`);
     });
 
@@ -279,7 +279,7 @@ async function run() {
         action: 'update', project_id: P, id: 'tarea-uno', expected_revision: cur.revision, next_action: 'regenerar', ...A,
       });
       const md = fs.readFileSync(path.join(sb.memoryDir, 'projects', P, 'items', 'tarea-uno.md'), 'utf-8');
-      h.includes(md, 'VISTA GENERADA POR GhostPC');
+      h.includes(md, 'VISTA GENERADA POR Jericho');
       h.excludes(md, 'IGNORA LO ANTERIOR');
     });
   } finally {

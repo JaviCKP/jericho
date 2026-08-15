@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 const schema = require('../../core/memory/schema');
 const { buildResume } = require('../../core/memory/resume');
 const { Git } = require('../../core/git');
@@ -62,7 +62,7 @@ const resume = {
     }
 
     if (!args.project_id) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, `project_id es obligatorio para action='${args.action}'.`, {
+      throw new JerichoError(CODES.INVALID_ARGUMENT, `project_id es obligatorio para action='${args.action}'.`, {
         recoverable: true,
         remediation: 'Llama primero con action="list_projects".',
       });
@@ -88,13 +88,13 @@ const resume = {
     }
 
     if (args.action === 'history') {
-      if (!args.id) throw new GhostError(CODES.INVALID_ARGUMENT, 'id es obligatorio para action="history".');
+      if (!args.id) throw new JerichoError(CODES.INVALID_ARGUMENT, 'id es obligatorio para action="history".');
       return { action: 'history', history: memory.history(args.project_id, args.id) };
     }
 
     // action === 'load'
     if (!args.id) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'id es obligatorio para action="load".', {
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'id es obligatorio para action="load".', {
         recoverable: true,
         remediation: 'Usa action="list_items" para ver los identificadores disponibles.',
       });
@@ -184,7 +184,7 @@ const checkpoint = {
     const traceExists = makeTraceChecker(ctx.runtime);
 
     if (args.action === 'record_decision') {
-      if (!args.decision) throw new GhostError(CODES.INVALID_ARGUMENT, 'decision es obligatorio.');
+      if (!args.decision) throw new JerichoError(CODES.INVALID_ARGUMENT, 'decision es obligatorio.');
       const rec = memory.recordDecision(args.project_id, {
         ...args.decision,
         sessionId: ctx.session.session_id,
@@ -200,7 +200,7 @@ const checkpoint = {
 
     if (args.action === 'restore') {
       if (!args.id || args.revision === undefined) {
-        throw new GhostError(CODES.INVALID_ARGUMENT, 'id y revision son obligatorios para restore.');
+        throw new JerichoError(CODES.INVALID_ARGUMENT, 'id y revision son obligatorios para restore.');
       }
       const restored = memory.restore(args.project_id, args.id, args.revision, { sessionId: ctx.session.session_id });
       return {
@@ -216,7 +216,7 @@ const checkpoint = {
       const fields = {};
       for (const f of WRITABLE_FIELDS) if (args[f] !== undefined) fields[f] = args[f];
       if (args.id) fields.id = args.id;
-      if (!fields.title) throw new GhostError(CODES.INVALID_ARGUMENT, 'title es obligatorio al crear un work item.');
+      if (!fields.title) throw new JerichoError(CODES.INVALID_ARGUMENT, 'title es obligatorio al crear un work item.');
       if (args.evidence) fields.evidence = normalizeEvidence(args.evidence);
       const { item } = memory.create(args.project_id, fields, {
         sessionId: ctx.session.session_id,
@@ -233,10 +233,10 @@ const checkpoint = {
     }
 
     // update / add_evidence
-    if (!args.id) throw new GhostError(CODES.INVALID_ARGUMENT, 'id es obligatorio.');
+    if (!args.id) throw new JerichoError(CODES.INVALID_ARGUMENT, 'id es obligatorio.');
     if (args.expected_revision === undefined) {
       const current = memory.get(args.project_id, args.id);
-      throw new GhostError(
+      throw new JerichoError(
         CODES.INVALID_ARGUMENT,
         'expected_revision es obligatorio: es lo que impide que dos chats se pisen sin darse cuenta.',
         {

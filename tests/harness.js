@@ -57,7 +57,7 @@ function excludes(haystack, needle, message) {
   }
 }
 
-/** Espera que `fn` lance un GhostError con el código indicado. */
+/** Espera que `fn` lance un JerichoError con el código indicado. */
 async function throwsCode(fn, code, message) {
   let threw = null;
   try {

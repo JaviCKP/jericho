@@ -3,14 +3,14 @@
 const fs = require('fs');
 const path = require('path');
 const { execFile, execFileSync } = require('child_process');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const { writeJsonAtomic, readJsonSafe } = require('../atomic');
 const { newProcId } = require('../ids');
 
 const isWindows = process.platform === 'win32';
 
 /**
- * Registro de procesos lanzados por GhostPC.
+ * Registro de procesos lanzados por Jericho.
  *
  * Resuelve tres problemas concretos del prototipo:
  *  1. El Map en memoria se perdía al reiniciar y dejaba procesos huérfanos vivos.
@@ -83,7 +83,7 @@ class ProcessRegistry {
       expires_at: new Date(Date.now() + ttlMs).toISOString(),
       status: 'RUNNING',
       exit_code: null,
-      owner: 'ghostpc',
+      owner: 'jericho',
     };
     this.live.set(procId, { ...record, child });
     this._persist();
@@ -117,12 +117,12 @@ class ProcessRegistry {
   get(procId, { sessionId = null } = {}) {
     const rec = this.live.get(procId);
     if (!rec) {
-      throw new GhostError(CODES.NOT_FOUND, `No existe ningún proceso gestionado con proc_id '${procId}'.`, {
+      throw new JerichoError(CODES.NOT_FOUND, `No existe ningún proceso gestionado con proc_id '${procId}'.`, {
         recoverable: true,
       });
     }
     if (sessionId && rec.session_id && rec.session_id !== sessionId) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.PROCESS_NOT_OWNED,
         `El proceso '${procId}' pertenece a otra sesión (${rec.session_id}).`,
         { details: { owner_session: rec.session_id } }
@@ -156,16 +156,16 @@ class ProcessRegistry {
     // Verificación anti-reutilización de PID.
     const nowStart = ProcessRegistry.processStartTime(rec.pid);
     if (rec.os_start_time && nowStart && nowStart !== rec.os_start_time) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.PROCESS_NOT_OWNED,
         `El PID ${rec.pid} ya no corresponde al proceso registrado (fue reutilizado por el sistema). No se envía ninguna señal.`,
         { details: { registered_start: rec.os_start_time, current_start: nowStart } }
       );
     }
     if (rec.os_start_time && !nowStart) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.PROCESS_NOT_OWNED,
-        `No se puede verificar la identidad del PID ${rec.pid}. GhostPC no mata procesos que no puede verificar.`,
+        `No se puede verificar la identidad del PID ${rec.pid}. Jericho no mata procesos que no puede verificar.`,
         { recoverable: true }
       );
     }

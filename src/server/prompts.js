@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../core/errors');
+const { JerichoError, CODES } = require('../core/errors');
 
 /**
  * MCP Prompts: flujos seleccionables por la PERSONA.
@@ -66,7 +66,7 @@ function getPrompt(runtime, name, args) {
           text(
             `Reanuda el trabajo en el proyecto "${args.project_id}".\n\n` +
               `Pasos, en este orden:\n` +
-              `1. ghostpc.status para conocer los límites reales.\n` +
+              `1. jericho.status para conocer los límites reales.\n` +
               `2. memory.resume(action="${args.item_id ? 'load' : 'list_items'}", project_id="${args.project_id}"` +
               `${args.item_id ? `, id="${args.item_id}"` : ''}, session_id="${sid}").\n` +
               `3. Lee con atención el bloque "staleness": indica qué ha cambiado desde la última sesión ` +
@@ -128,7 +128,7 @@ function getPrompt(runtime, name, args) {
       };
 
     default:
-      throw new GhostError(CODES.NOT_FOUND, `Prompt desconocido: ${name}`, {
+      throw new JerichoError(CODES.NOT_FOUND, `Prompt desconocido: ${name}`, {
         details: { available: PROMPTS.map((p) => p.name) },
       });
   }

@@ -91,19 +91,19 @@ class RawClient {
 }
 
 function sandboxEnv() {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-proto-'));
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'jericho-proto-'));
   const secret = 'protocol-test-session-secret';
   const env = {
       CHATGPT_WORKSPACE: path.join(base, 'ws'),
-      GHOSTPC_CONTROL_DIR: path.join(base, 'control'),
-      GHOSTPC_MEMORY_DIR: path.join(base, 'memory'),
-      GHOSTPC_POLICY_FILE: path.join(base, 'control', 'policy.json'),
-      GHOSTPC_SESSION_AUTH_SECRET: secret,
+      JERICHO_CONTROL_DIR: path.join(base, 'control'),
+      JERICHO_MEMORY_DIR: path.join(base, 'memory'),
+      JERICHO_POLICY_FILE: path.join(base, 'control', 'policy.json'),
+      JERICHO_SESSION_AUTH_SECRET: secret,
       LOG_LEVEL: 'ERROR',
     };
-  const { policy } = loadPolicy({ policyFile: env.GHOSTPC_POLICY_FILE, env });
+  const { policy } = loadPolicy({ policyFile: env.JERICHO_POLICY_FILE, env });
   const revision = crypto.createHash('sha256').update(JSON.stringify(policy)).digest('hex');
-  env.GHOSTPC_MCP_SESSION_TOKEN = new SessionAuthority({ secret, policyRevision: revision }).issue({
+  env.JERICHO_MCP_SESSION_TOKEN = new SessionAuthority({ secret, policyRevision: revision }).issue({
     session_id: 'protocol-session', user_id: 'protocol-user', project_id: 'demo', permissions: ['read'], profile: 'core_read',
   });
   return {
@@ -147,7 +147,7 @@ async function run() {
     });
 
     await h.test('tools/call devuelve structuredContent conforme al outputSchema', async () => {
-      const res = await moderno.send('tools/call', { name: 'ghostpc.status', arguments: {} });
+      const res = await moderno.send('tools/call', { name: 'jericho.status', arguments: {} });
       h.ok(res.result.structuredContent, 'no hay structuredContent');
       h.equal(res.result.structuredContent.ok, true);
       h.ok(res.result.structuredContent.trace_id, 'no hay trace_id');
@@ -165,11 +165,11 @@ async function run() {
     await h.test('resources/list funciona', async () => {
       const res = await moderno.send('resources/list', {});
       h.ok(res.result.resources.length >= 5, `sólo ${res.result.resources.length} recursos`);
-      h.includes(JSON.stringify(res.result.resources), 'ghostpc://policy');
+      h.includes(JSON.stringify(res.result.resources), 'jericho://policy');
     });
 
     await h.test('resources/read devuelve la política', async () => {
-      const res = await moderno.send('resources/read', { uri: 'ghostpc://policy' });
+      const res = await moderno.send('resources/read', { uri: 'jericho://policy' });
       const texto = res.result.contents[0].text;
       h.includes(texto, 'max_risk');
       h.includes(texto, 'enabled_tools');
@@ -225,17 +225,17 @@ async function run() {
 
     await h.test('la descripción incorpora versión y riesgo para el cliente antiguo', async () => {
       const res = await antiguo.send('tools/list', {});
-      h.includes(res.result.tools[0].description, '[GhostPC 2.0.0 · riesgo R');
+      h.includes(res.result.tools[0].description, '[Jericho 2.0.0 · riesgo R');
     });
 
     await h.test('a un cliente antiguo NO se le envía structuredContent', async () => {
-      const res = await antiguo.send('tools/call', { name: 'ghostpc.status', arguments: {} });
+      const res = await antiguo.send('tools/call', { name: 'jericho.status', arguments: {} });
       h.equal(res.result.structuredContent, undefined, 'se envió structuredContent a un cliente antiguo');
       h.ok(res.result.content[0].text.length > 50, 'el contenido textual está vacío');
     });
 
     await h.test('el resultado textual sigue siendo legible y completo', async () => {
-      const res = await antiguo.send('tools/call', { name: 'ghostpc.status', arguments: {} });
+      const res = await antiguo.send('tools/call', { name: 'jericho.status', arguments: {} });
       h.includes(res.result.content[0].text, 'raíces de archivos autorizadas');
       h.includes(res.result.content[0].text, 'DATO NO FIABLE');
     });

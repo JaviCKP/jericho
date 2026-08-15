@@ -298,7 +298,7 @@ function migrate({ store, workspaceDir, dataDir, dryRun = true }) {
   report.reversible = true;
   report.rollback_instructions =
     'La migración es aditiva: no borra .tasks/, .context/, long_term_memory.json ni checkpoints/. ' +
-    'Para revertir, borra el directorio data/memory/ y vuelve a arrancar con GHOSTPC_PROFILES sin memoria v2. ' +
+    'Para revertir, borra el directorio data/memory/ y vuelve a arrancar con JERICHO_PROFILES sin memoria v2. ' +
     'Cada work item migrado conserva `migrated_from.source_path`.';
   return report;
 }

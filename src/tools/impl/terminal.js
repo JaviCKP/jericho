@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 
 /**
  * terminal.exec y verify.run.
@@ -14,7 +14,7 @@ const { GhostError, CODES } = require('../../core/errors');
 function resolveCwd(args, ctx) {
   const { roots } = ctx.runtime;
   if (!args.cwd) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, 'cwd es obligatorio: GhostPC no ejecuta procesos sin directorio de trabajo explícito.', {
+    throw new JerichoError(CODES.INVALID_ARGUMENT, 'cwd es obligatorio: Jericho no ejecuta procesos sin directorio de trabajo explícito.', {
       recoverable: true,
       remediation: `Raíces disponibles: ${roots.list().map((r) => r.name).join(', ')}. Usa cwd="." con root="<nombre>".`,
     });
@@ -30,13 +30,13 @@ const exec = {
   effects: (args, ctx) => {
     if (args.action === 'logs' || args.action === 'list') return {};
     if (args.action === 'run' || args.action === 'start_background') {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.COMMAND_NOT_ALLOWED,
         'terminal.exec no expone ejecuciÃ³n genÃ©rica; requiere un action_id definido por operador fuera del repositorio.',
         { details: { reason: 'generic_process_disabled' } }
       );
     }
-    // Detener sólo puede afectar a procesos que GhostPC creó y que pertenecen a
+    // Detener sólo puede afectar a procesos que Jericho creó y que pertenecen a
     // esta sesión (lo comprueba el registro). No es un efecto externo: es la
     // operación inversa de arrancarlo, que es R1. La protección real aquí es la
     // verificación de propiedad e identidad de PID, no una confirmación humana.
@@ -73,19 +73,19 @@ const exec = {
     }
 
     if (args.action === 'logs') {
-      if (!args.proc_id) throw new GhostError(CODES.INVALID_ARGUMENT, 'proc_id es obligatorio para action="logs".');
+      if (!args.proc_id) throw new JerichoError(CODES.INVALID_ARGUMENT, 'proc_id es obligatorio para action="logs".');
       const res = runner.readLogs(args.proc_id, { maxLines: args.max_lines || 100, session: ctx.session });
       return { action: 'logs', ...res, untrusted_content: true };
     }
 
     if (args.action === 'stop') {
-      if (!args.proc_id) throw new GhostError(CODES.INVALID_ARGUMENT, 'proc_id es obligatorio para action="stop".');
+      if (!args.proc_id) throw new JerichoError(CODES.INVALID_ARGUMENT, 'proc_id es obligatorio para action="stop".');
       const res = await registry.kill(args.proc_id, { sessionId: ctx.session.session_id, reason: 'requested_by_agent' });
       return { action: 'stop', proc_id: res.proc_id, ...res };
     }
 
     if (!args.program) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'program es obligatorio.', {
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'program es obligatorio.', {
         recoverable: true,
         remediation: `Programas permitidos: ${ctx.runtime.policy.exec.allowed_programs.join(', ')}`,
       });
@@ -208,14 +208,14 @@ function detectCheckCommand(check, cwdAbs) {
 const verify = {
   summary: (args) => `verify.run ${args.check}`,
   effects: () => {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,
       'verify.run está desactivado hasta disponer de action_id operator-defined fuera del repositorio.',
       { details: { reason: 'repository_scripts_disabled' } }
     );
   },
   async run(args, ctx) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,
       'verify.run estÃ¡ desactivado hasta disponer de action_id operator-defined fuera del repositorio.',
       { details: { reason: 'repository_scripts_disabled' }, remediation: 'Configura una acciÃ³n fija fuera de MCP con aislamiento del sistema operativo.' }
@@ -227,12 +227,12 @@ const verify = {
 
     let cmd;
     if (args.check === 'custom') {
-      if (!args.program) throw new GhostError(CODES.INVALID_ARGUMENT, 'program es obligatorio cuando check="custom".');
+      if (!args.program) throw new JerichoError(CODES.INVALID_ARGUMENT, 'program es obligatorio cuando check="custom".');
       cmd = { program: args.program, args: args.args || [] };
     } else {
       cmd = detectCheckCommand(args.check, cwd.absolute);
       if (!cmd) {
-        throw new GhostError(
+        throw new JerichoError(
           CODES.NOT_FOUND,
           `No se pudo determinar cómo ejecutar '${args.check}' en ${cwd.relative || '.'}.`,
           {

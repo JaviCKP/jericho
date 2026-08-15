@@ -13,12 +13,12 @@ function gitRaw(cwd, args) {
 }
 
 async function run() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-git-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'jericho-git-'));
   const repo = path.join(root, 'repo');
   fs.mkdirSync(repo);
   gitRaw(repo, ['init', '-q']);
-  gitRaw(repo, ['config', 'user.name', 'GhostPC test']);
-  gitRaw(repo, ['config', 'user.email', 'ghostpc@example.invalid']);
+  gitRaw(repo, ['config', 'user.name', 'Jericho test']);
+  gitRaw(repo, ['config', 'user.email', 'jericho@example.invalid']);
   fs.writeFileSync(path.join(repo, 'file.txt'), 'safe\n');
   const marker = path.join(root, 'hook-ran');
   const hook = path.join(repo, '.git', 'hooks', 'pre-commit');

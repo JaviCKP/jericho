@@ -71,7 +71,7 @@ class Journal {
         this.writeFailures = (this.writeFailures || 0) + 1;
         this.lastWriteError = new Date().toISOString();
         process.stderr.write(
-          `[GhostPC] FALLO AL ESCRIBIR EL DIARIO DE AUDITORÍA (${this.writeFailures} veces). ` +
+          `[Jericho] FALLO AL ESCRIBIR EL DIARIO DE AUDITORÍA (${this.writeFailures} veces). ` +
             `La cadena quedará incompleta: revisa ${this.dir}\n`
         );
         return full;
@@ -84,7 +84,7 @@ class Journal {
       fs.writeFileSync(tmp, hash, 'utf-8');
       fs.renameSync(tmp, this.headFile);
     } catch (e) {
-      process.stderr.write(`[GhostPC] No se pudo actualizar HEAD del diario: ${e.code}\n`);
+      process.stderr.write(`[Jericho] No se pudo actualizar HEAD del diario: ${e.code}\n`);
     }
     this.prevHash = hash;
     return full;

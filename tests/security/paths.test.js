@@ -11,7 +11,7 @@ const path = require('path');
 const h = require('../harness');
 const { Roots, canonicalize, isInside } = require('../../src/core/workspace/paths');
 
-const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-paths-'));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), 'jericho-paths-'));
 const ws = path.join(base, 'ws');
 const outside = path.join(base, 'outside');
 const control = path.join(base, 'control');
@@ -68,7 +68,7 @@ async function run() {
     h.ok(['PATH_OUTSIDE_ROOT', 'PATH_DENIED'].includes(err.code), `código inesperado: ${err.code}`);
   });
 
-  await h.test('rutas de control de GhostPC no accesibles', async () => {
+  await h.test('rutas de control de Jericho no accesibles', async () => {
     const err = await h.throwsCode(() => roots.resolve(path.join(control, 'policy.json')));
     h.ok(['PATH_OUTSIDE_ROOT', 'PATH_DENIED'].includes(err.code), `código inesperado: ${err.code}`);
   });

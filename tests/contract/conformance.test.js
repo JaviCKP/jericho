@@ -22,7 +22,7 @@ const { checkOutput } = require('../../src/tools/validate');
 function casos(sb) {
   const S = { session_id: 'ses_conf' };
   return {
-    'ghostpc.status': [{}, { include: ['policy', 'metrics', 'approvals', 'processes', 'recent_activity'] }, { include: ['inventado'] }],
+    'jericho.status': [{}, { include: ['policy', 'metrics', 'approvals', 'processes', 'recent_activity'] }, { include: ['inventado'] }],
     'workspace.inspect': [{ action: 'roots' }, { action: 'tree', path: '.' }, { action: 'stat', path: 'a.txt' }, { action: 'stat', path: 'no-existe' }],
     'workspace.search': [{ mode: 'files', pattern: '**/*.txt' }, { mode: 'content', pattern: 'hola' }, { mode: 'content', pattern: '[', is_regex: true }],
     'workspace.read': [{ paths: ['a.txt'] }, { paths: ['no-existe.txt'] }, { paths: ['../fuera'] }],
@@ -130,7 +130,7 @@ async function run() {
     });
 
     await h.test('las herramientas de perfiles inactivos devuelven PROFILE_DISABLED', async () => {
-      for (const name of ['desktop.observe', 'web.fetch_readonly', 'admin.perform_allowlisted_action']) {
+      for (const name of ['web.fetch_readonly', 'http.call_allowlisted', 'admin.perform_allowlisted_action']) {
         const r = await d.call(name, { ...casos(sb)[name][0], session_id: 'ses_conf' });
         h.equal(r.structuredContent.error, 'PROFILE_DISABLED', `${name} no está protegida por perfil`);
       }

@@ -2,7 +2,7 @@
 
 const dns = require('dns').promises;
 const net = require('net');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const redact = require('../redact');
 
 /**
@@ -103,11 +103,11 @@ class NetworkGuard {
   async assertHostAllowed(hostname, { allowPrivate = false } = {}) {
     const lower = String(hostname).toLowerCase();
     if (METADATA_HOSTS.has(lower)) {
-      throw new GhostError(CODES.NET_PRIVATE_ADDRESS, `Destino de metadatos bloqueado: ${lower}.`);
+      throw new JerichoError(CODES.NET_PRIVATE_ADDRESS, `Destino de metadatos bloqueado: ${lower}.`);
     }
     if (lower === 'localhost' || lower.endsWith('.localhost') || lower.endsWith('.local') || lower.endsWith('.internal')) {
       if (!allowPrivate) {
-        throw new GhostError(CODES.NET_PRIVATE_ADDRESS, `Nombre de host local bloqueado: ${lower}.`);
+        throw new JerichoError(CODES.NET_PRIVATE_ADDRESS, `Nombre de host local bloqueado: ${lower}.`);
       }
     }
 
@@ -115,7 +115,7 @@ class NetworkGuard {
     if (net.isIP(lower)) {
       const c = classifyAddress(lower);
       if (c.blocked && !allowPrivate) {
-        throw new GhostError(CODES.NET_PRIVATE_ADDRESS, `Dirección bloqueada (${c.reason}): ${lower}.`);
+        throw new JerichoError(CODES.NET_PRIVATE_ADDRESS, `Dirección bloqueada (${c.reason}): ${lower}.`);
       }
       return [lower];
     }
@@ -124,12 +124,12 @@ class NetworkGuard {
     try {
       records = await dns.lookup(lower, { all: true, verbatim: true });
     } catch (err) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, `No se pudo resolver el host '${lower}': ${err.code || err.message}.`, {
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, `No se pudo resolver el host '${lower}': ${err.code || err.message}.`, {
         recoverable: true,
       });
     }
     if (!records.length) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, `El host '${lower}' no resolvió a ninguna dirección.`);
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, `El host '${lower}' no resolvió a ninguna dirección.`);
     }
     // TODAS las direcciones deben ser válidas: si alguna es privada, se bloquea
     // (defensa frente a DNS rebinding con respuestas mixtas).
@@ -137,9 +137,9 @@ class NetworkGuard {
       const c = classifyAddress(r.address);
       if (c.blocked && !allowPrivate) {
         if (METADATA_HOSTS.has(r.address)) {
-          throw new GhostError(CODES.NET_PRIVATE_ADDRESS, `'${lower}' resuelve a un endpoint de metadatos (${r.address}).`);
+          throw new JerichoError(CODES.NET_PRIVATE_ADDRESS, `'${lower}' resuelve a un endpoint de metadatos (${r.address}).`);
         }
-        throw new GhostError(
+        throw new JerichoError(
           CODES.NET_PRIVATE_ADDRESS,
           `'${lower}' resuelve a una dirección no permitida (${r.address}: ${c.reason}).`,
           { details: { host: lower, address: r.address, reason: c.reason } }
@@ -156,26 +156,26 @@ class NetworkGuard {
   resolveAliasUrl(alias, pathAndQuery = '/', method = 'GET') {
     const dest = this.destinations.get(alias);
     if (!dest) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, `Destino de red desconocido: '${alias}'.`, {
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, `Destino de red desconocido: '${alias}'.`, {
         details: { available: [...this.destinations.keys()] },
         remediation: 'Una persona debe añadir el destino a network.destinations en la política.',
       });
     }
     const m = String(method || 'GET').toUpperCase();
     if (!dest.methods.map((x) => x.toUpperCase()).includes(m)) {
-      throw new GhostError(CODES.NET_METHOD_DENIED, `El método ${m} no está permitido para el destino '${alias}'.`, {
+      throw new JerichoError(CODES.NET_METHOD_DENIED, `El método ${m} no está permitido para el destino '${alias}'.`, {
         details: { allowed: dest.methods },
       });
     }
     let rel = String(pathAndQuery || '/');
     if (!rel.startsWith('/')) rel = '/' + rel;
     if (rel.includes('\\') || rel.includes('\0')) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'Ruta de destino inválida.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'Ruta de destino inválida.');
     }
     const url = new URL(rel, dest.originUrl);
     // La ruta no puede sacarnos del origen declarado.
     if (url.origin !== dest.originUrl.origin) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, `La ruta sale del origen autorizado de '${alias}'.`);
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, `La ruta sale del origen autorizado de '${alias}'.`);
     }
     return { url, dest, method: m };
   }
@@ -184,19 +184,19 @@ class NetworkGuard {
   assertFetchUrlAllowed(rawUrl) {
     const cfg = this.policy.network.fetch_readonly || {};
     if (!cfg.enabled) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, 'web.fetch_readonly está desactivado por política.');
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, 'web.fetch_readonly está desactivado por política.');
     }
     let url;
     try {
       url = new URL(rawUrl);
     } catch (e) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'URL inválida.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'URL inválida.');
     }
     if (!(cfg.schemes || ['https:']).includes(url.protocol)) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, `Esquema no permitido: ${url.protocol} (se exige ${(cfg.schemes || ['https:']).join(', ')}).`);
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, `Esquema no permitido: ${url.protocol} (se exige ${(cfg.schemes || ['https:']).join(', ')}).`);
     }
     if (url.username || url.password) {
-      throw new GhostError(CODES.NET_DESTINATION_DENIED, 'No se permiten credenciales embebidas en la URL.');
+      throw new JerichoError(CODES.NET_DESTINATION_DENIED, 'No se permiten credenciales embebidas en la URL.');
     }
     return url;
   }
@@ -220,7 +220,7 @@ class NetworkGuard {
     const lim = this._limits();
     const bytesSent = body ? Buffer.byteLength(body) : 0;
     if (bytesSent > lim.max_request_bytes) {
-      throw new GhostError(CODES.NET_LIMIT_EXCEEDED, `Cuerpo de petición de ${bytesSent} bytes; el límite es ${lim.max_request_bytes}.`);
+      throw new JerichoError(CODES.NET_LIMIT_EXCEEDED, `Cuerpo de petición de ${bytesSent} bytes; el límite es ${lim.max_request_bytes}.`);
     }
 
     const redirects = [];
@@ -238,7 +238,7 @@ class NetworkGuard {
         res = await fetch(current, {
           method: currentMethod,
           headers: {
-            'User-Agent': 'GhostPC/2.0 (+local-agent)',
+            'User-Agent': 'Jericho/2.0 (+local-agent)',
             Accept: headers.Accept || '*/*',
             ...headers,
           },
@@ -249,11 +249,11 @@ class NetworkGuard {
       } catch (err) {
         clearTimeout(timer);
         if (err.name === 'AbortError') {
-          throw new GhostError(CODES.TIMEOUT, `La petición a ${redact.redactUrl(current.toString())} superó ${lim.timeout_ms} ms.`, {
+          throw new JerichoError(CODES.TIMEOUT, `La petición a ${redact.redactUrl(current.toString())} superó ${lim.timeout_ms} ms.`, {
             recoverable: true,
           });
         }
-        throw new GhostError(CODES.NET_DESTINATION_DENIED, `Fallo de red: ${err.cause ? err.cause.code || err.cause.message : err.message}`, {
+        throw new JerichoError(CODES.NET_DESTINATION_DENIED, `Fallo de red: ${err.cause ? err.cause.code || err.cause.message : err.message}`, {
           recoverable: true,
         });
       }
@@ -266,13 +266,13 @@ class NetworkGuard {
         try {
           next = new URL(loc, current);
         } catch (e) {
-          throw new GhostError(CODES.NET_REDIRECT_DENIED, `Redirección con Location inválida: ${loc}`);
+          throw new JerichoError(CODES.NET_REDIRECT_DENIED, `Redirección con Location inválida: ${loc}`);
         }
         if (hop === lim.max_redirects) {
-          throw new GhostError(CODES.NET_REDIRECT_DENIED, `Se superó el máximo de ${lim.max_redirects} redirecciones.`);
+          throw new JerichoError(CODES.NET_REDIRECT_DENIED, `Se superó el máximo de ${lim.max_redirects} redirecciones.`);
         }
         if (next.protocol !== 'https:' && !allowPrivate) {
-          throw new GhostError(CODES.NET_REDIRECT_DENIED, `Redirección a un esquema no permitido: ${next.protocol}`);
+          throw new JerichoError(CODES.NET_REDIRECT_DENIED, `Redirección a un esquema no permitido: ${next.protocol}`);
         }
         // Una redirección no puede llevarnos a un destino que no esté autorizado
         // por sí mismo. Se comprueba DNS + rangos en la siguiente vuelta.
@@ -314,7 +314,7 @@ class NetworkGuard {
         redirects,
       };
     }
-    throw new GhostError(CODES.NET_REDIRECT_DENIED, 'Bucle de redirecciones.');
+    throw new JerichoError(CODES.NET_REDIRECT_DENIED, 'Bucle de redirecciones.');
   }
 
   _journalHop(kind, data) {

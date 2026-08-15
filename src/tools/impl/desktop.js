@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 const observer = require('../../core/desktop/observe');
 const redact = require('../../core/redact');
 
@@ -11,7 +11,7 @@ const redact = require('../../core/redact');
  *   1. API directa  2. árbol de accesibilidad  3. selector  4. captura de región
  *   5. coordenadas (último recurso, y SIEMPRE relativas a una ventana verificada)
  *
- * GhostPC implementa 4 y 5 con precondiciones estrictas. Los niveles 2 y 3
+ * Jericho implementa 4 y 5 con precondiciones estrictas. Los niveles 2 y 3
  * (UI Automation / árbol de accesibilidad) NO están implementados: se documenta
  * como limitación en SECURITY.md y ARCHITECTURE_V2.md.
  */
@@ -32,7 +32,7 @@ function loadInputDeps() {
     }
   }
   if (!nut) {
-    throw new GhostError(CODES.INTERNAL, 'La dependencia de entrada (@nut-tree-fork/nut-js) no está disponible.', {
+    throw new JerichoError(CODES.INTERNAL, 'La dependencia de entrada (@nut-tree-fork/nut-js) no está disponible.', {
       remediation: 'Ejecuta npm install, o desactiva el perfil "desktop" en la política.',
     });
   }
@@ -48,7 +48,7 @@ function loadImageDeps() {
     }
   }
   if (!Jimp) {
-    throw new GhostError(CODES.INTERNAL, 'La dependencia de imagen (jimp) no está disponible.', {
+    throw new JerichoError(CODES.INTERNAL, 'La dependencia de imagen (jimp) no está disponible.', {
       remediation: 'Ejecuta npm install.',
     });
   }
@@ -123,7 +123,7 @@ const observe = {
     let windowInfo = null;
 
     if (args.action === 'capture_window') {
-      if (!args.window_id) throw new GhostError(CODES.INVALID_ARGUMENT, 'window_id es obligatorio para capture_window.');
+      if (!args.window_id) throw new JerichoError(CODES.INVALID_ARGUMENT, 'window_id es obligatorio para capture_window.');
       const pre = await observer.assertWindowPrecondition({
         windowId: args.window_id,
         expectTitleContains: args.expect_title_contains,
@@ -131,13 +131,13 @@ const observe = {
       });
       windowInfo = pre.window;
       if (!windowInfo.bounds) {
-        throw new GhostError(CODES.PRECONDITION_WINDOW, 'Esta plataforma no expone la geometría de la ventana; no se puede capturar sólo esa ventana.', {
+        throw new JerichoError(CODES.PRECONDITION_WINDOW, 'Esta plataforma no expone la geometría de la ventana; no se puede capturar sólo esa ventana.', {
           remediation: 'Usa action="capture_region" con coordenadas explícitas.',
         });
       }
       region = { ...windowInfo.bounds };
     } else if (args.action === 'capture_region') {
-      if (!args.region) throw new GhostError(CODES.INVALID_ARGUMENT, 'region es obligatoria para capture_region.');
+      if (!args.region) throw new JerichoError(CODES.INVALID_ARGUMENT, 'region es obligatoria para capture_region.');
       region = { ...args.region };
     } else {
       // capture_screen: pantalla virtual completa (todos los monitores).
@@ -251,17 +251,17 @@ const elementAction = {
         (obs.window && obs.window.window_id === Number(args.window_id) && obs.window) ||
         (obs.windows || []).find((w) => w.window_id === Number(args.window_id));
       if (!observada) {
-        throw new GhostError(
+        throw new JerichoError(
           CODES.OBSERVATION_STALE,
           `La observación ${args.observation_id} no incluye la ventana ${args.window_id}.`,
           { recoverable: true, remediation: 'Observa esa ventana con desktop.observe(action="capture_window").' }
         );
       }
       if (args.x === undefined || args.y === undefined) {
-        throw new GhostError(CODES.INVALID_ARGUMENT, 'x e y (relativas a la ventana) son obligatorias.');
+        throw new JerichoError(CODES.INVALID_ARGUMENT, 'x e y (relativas a la ventana) son obligatorias.');
       }
       if (observada.bounds && (args.x < 0 || args.y < 0 || args.x > observada.bounds.width || args.y > observada.bounds.height)) {
-        throw new GhostError(
+        throw new JerichoError(
           CODES.INVALID_ARGUMENT,
           `(${args.x}, ${args.y}) cae fuera de la ventana (${observada.bounds.width}x${observada.bounds.height}). No se hace clic fuera del objetivo.`,
           { recoverable: true }
@@ -304,7 +304,7 @@ const elementAction = {
       (obs.windows || []).find((w) => w.window_id === Number(args.window_id));
 
     if (!observedWindow) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.OBSERVATION_STALE,
         `La observación ${args.observation_id} no incluye la ventana ${args.window_id}.`,
         { recoverable: true, remediation: 'Observa esa ventana concreta con desktop.observe(action="capture_window").' }
@@ -320,13 +320,13 @@ const elementAction = {
     const win = pre.window;
 
     if (args.x === undefined || args.y === undefined) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'x e y (relativas a la ventana) son obligatorias.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'x e y (relativas a la ventana) son obligatorias.');
     }
     if (!win.bounds) {
-      throw new GhostError(CODES.PRECONDITION_WINDOW, 'Sin geometría de ventana no se pueden traducir coordenadas relativas.');
+      throw new JerichoError(CODES.PRECONDITION_WINDOW, 'Sin geometría de ventana no se pueden traducir coordenadas relativas.');
     }
     if (args.x < 0 || args.y < 0 || args.x > win.bounds.width || args.y > win.bounds.height) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.INVALID_ARGUMENT,
         `(${args.x}, ${args.y}) cae fuera de la ventana (${win.bounds.width}x${win.bounds.height}). No se hace clic fuera del objetivo.`,
         { recoverable: true }
@@ -360,13 +360,13 @@ const elementAction = {
         await mouse.click(Button.RIGHT);
         break;
       case 'scroll':
-        if (!args.scroll_amount) throw new GhostError(CODES.INVALID_ARGUMENT, 'scroll_amount es obligatorio.');
+        if (!args.scroll_amount) throw new JerichoError(CODES.INVALID_ARGUMENT, 'scroll_amount es obligatorio.');
         if (args.scroll_amount > 0) await mouse.scrollDown(args.scroll_amount);
         else await mouse.scrollUp(Math.abs(args.scroll_amount));
         break;
       case 'drag': {
         if (args.to_x === undefined || args.to_y === undefined) {
-          throw new GhostError(CODES.INVALID_ARGUMENT, 'to_x y to_y son obligatorias para drag.');
+          throw new JerichoError(CODES.INVALID_ARGUMENT, 'to_x y to_y son obligatorias para drag.');
         }
         await mouse.pressButton(Button.LEFT);
         await mouse.setPosition(new Point(win.bounds.x + Math.round(args.to_x), win.bounds.y + Math.round(args.to_y)));
@@ -374,7 +374,7 @@ const elementAction = {
         break;
       }
       default:
-        throw new GhostError(CODES.INVALID_ARGUMENT, `Acción no soportada: ${args.action}`);
+        throw new JerichoError(CODES.INVALID_ARGUMENT, `Acción no soportada: ${args.action}`);
     }
 
     store.consume(args.observation_id);
@@ -421,15 +421,15 @@ const keyboard = {
 
     if (args.action === 'type') {
       if (typeof args.text !== 'string' || args.text.length === 0) {
-        throw new GhostError(CODES.INVALID_ARGUMENT, 'text es obligatorio para action="type".');
+        throw new JerichoError(CODES.INVALID_ARGUMENT, 'text es obligatorio para action="type".');
       }
       // Nunca se teclea un secreto conocido.
       ctx.runtime.secrets.assertNoLeak(args.text, 'entrada de teclado');
       if (redact.containsKnownSecret(args.text)) {
-        throw new GhostError(CODES.SECRET_VALUE_NEVER_RETURNED, 'El texto contiene un valor de secreto conocido. No se teclea.');
+        throw new JerichoError(CODES.SECRET_VALUE_NEVER_RETURNED, 'El texto contiene un valor de secreto conocido. No se teclea.');
       }
       if (!ctx.runtime.policy.desktop.allow_typing_secrets && /-----BEGIN [A-Z ]*PRIVATE KEY-----|\bsk-[A-Za-z0-9_-]{16,}/.test(args.text)) {
-        throw new GhostError(CODES.POLICY_DENIED, 'El texto tiene forma de credencial. La política prohíbe teclear secretos.', {
+        throw new JerichoError(CODES.POLICY_DENIED, 'El texto tiene forma de credencial. La política prohíbe teclear secretos.', {
           remediation: 'Introduce las credenciales tú mismo, o usa terminal.exec con secret_names.',
         });
       }
@@ -462,13 +462,13 @@ const keyboard = {
         const alias = KEY_ALIASES[String(k).toLowerCase().trim()];
         const nutKey = alias ? nut.Key[alias] : nut.Key[String(k).toUpperCase()];
         if (nutKey === undefined) {
-          throw new GhostError(CODES.INVALID_ARGUMENT, `Tecla no reconocida: '${k}'.`, {
+          throw new JerichoError(CODES.INVALID_ARGUMENT, `Tecla no reconocida: '${k}'.`, {
             details: { known: Object.keys(KEY_ALIASES) },
           });
         }
         return nutKey;
       });
-      if (!keys.length) throw new GhostError(CODES.INVALID_ARGUMENT, 'keys es obligatorio para action="hotkey".');
+      if (!keys.length) throw new JerichoError(CODES.INVALID_ARGUMENT, 'keys es obligatorio para action="hotkey".');
       for (const k of keys) await nut.keyboard.pressKey(k);
       for (let i = keys.length - 1; i >= 0; i--) await nut.keyboard.releaseKey(keys[i]);
     }

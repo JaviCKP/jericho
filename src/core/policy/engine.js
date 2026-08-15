@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const { RISK, parseRisk, riskName, maxRisk } = require('../risk');
 const { ANONYMOUS_SESSION } = require('../ids');
 
@@ -91,7 +91,7 @@ class PolicyEngine {
   }
 
   /**
-   * Autoriza una llamada. Lanza GhostError si se deniega o falta aprobación.
+   * Autoriza una llamada. Lanza JerichoError si se deniega o falta aprobación.
    *
    * @returns {{effective_risk:string, approval:string, dry_run:boolean, grant:object|null}}
    */
@@ -108,11 +108,11 @@ class PolicyEngine {
       summary = '',
     } = ctx;
 
-    if (!tool) throw new GhostError(CODES.INVALID_ARGUMENT, 'authorize requiere el nombre de la herramienta.');
+    if (!tool) throw new JerichoError(CODES.INVALID_ARGUMENT, 'authorize requiere el nombre de la herramienta.');
 
     // 1. Perfil
     if (!this.isToolEnabled(tool)) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.PROFILE_DISABLED,
         `La herramienta '${tool}' no está en ningún perfil activo (${this.policy.profiles.join(', ')}).`,
         {
@@ -132,7 +132,7 @@ class PolicyEngine {
 
     // 4. Techo global
     if (effective > this.maxRisk) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.RISK_LEVEL_DISABLED,
         `Operación de nivel ${riskName(effective)} por encima del máximo permitido (${riskName(this.maxRisk)}).`,
         {
@@ -145,21 +145,21 @@ class PolicyEngine {
     // 5. Identidad: la conexión MCP no es identidad. Sin session_id explícito, se limita.
     const sessionId = session.session_id || ANONYMOUS_SESSION;
     if (sessionId === ANONYMOUS_SESSION && effective > this.anonMaxRisk) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.POLICY_DENIED,
         `Sesión anónima limitada a ${riskName(this.anonMaxRisk)}; esta operación es ${riskName(effective)}.`,
         {
           recoverable: true,
           remediation:
             'Vuelve a llamar indicando un session_id explícito (p. ej. el que devuelve memory.resume). ' +
-            'GhostPC no usa la conexión MCP como identidad.',
+            'Jericho no usa la conexión MCP como identidad.',
         }
       );
     }
 
     // 6. Proyecto y raíz: si la operación toca archivos, debe declarar la raíz.
     if (effects.root && !this.roots.byName(effects.root)) {
-      throw new GhostError(CODES.ROOT_UNKNOWN, `Raíz autorizada desconocida: '${effects.root}'.`);
+      throw new JerichoError(CODES.ROOT_UNKNOWN, `Raíz autorizada desconocida: '${effects.root}'.`);
     }
 
     // 7. Aprobación
@@ -171,7 +171,7 @@ class PolicyEngine {
         approval = 'standing_grant';
       } else if (approvalId) {
         if (!session.user_id || !session.project_id) {
-          throw new GhostError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
+          throw new JerichoError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
         }
         this.approvals.consume(approvalId, tool, args, {
           session_id: session.session_id,
@@ -181,7 +181,7 @@ class PolicyEngine {
         approval = `explicit:${approvalId}`;
       } else {
         if (!session.user_id || !session.project_id) {
-          throw new GhostError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
+          throw new JerichoError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
         }
         const req = this.approvals.request({
           tool,
@@ -196,7 +196,7 @@ class PolicyEngine {
           effects,
         });
         if (this.metrics) this.metrics.bump('approvals_requested');
-        throw new GhostError(
+        throw new JerichoError(
           CODES.APPROVAL_REQUIRED,
           `Esta operación es ${riskName(effective)} y necesita aprobación explícita de una persona.`,
           {
@@ -248,7 +248,7 @@ class PolicyEngine {
     const limit = limitPath.split('.').reduce((o, k) => (o == null ? undefined : o[k]), this.policy.limits);
     if (typeof limit !== 'number') return actual;
     if (actual > limit) {
-      throw new GhostError(CODES.LIMIT_EXCEEDED, `${what}: ${actual} supera el límite de política (${limit}).`, {
+      throw new JerichoError(CODES.LIMIT_EXCEEDED, `${what}: ${actual} supera el límite de política (${limit}).`, {
         details: { limit, actual, limitPath },
         remediation: 'Divide la operación en partes más pequeñas.',
       });

@@ -27,7 +27,7 @@ const { SERVER_INSTRUCTIONS } = require('./server/instructions');
 const redact = require('./core/redact');
 
 /**
- * Servidor MCP de GhostPC v2.
+ * Servidor MCP de Jericho v2.
  *
  * Diferencias clave con v1:
  *  - Las herramientas se exponen por PERFIL, no todas a la vez.
@@ -75,7 +75,7 @@ async function main() {
     logger.error('LA CADENA DEL DIARIO DE AUDITORÍA NO VERIFICA', recovery.journal_chain);
   }
 
-  const legacyMode = (process.env.GHOSTPC_LEGACY_ALIASES || 'explain').toLowerCase();
+  const legacyMode = (process.env.JERICHO_LEGACY_ALIASES || 'explain').toLowerCase();
   const dispatcher = new Dispatcher(runtime, IMPLEMENTATIONS, { legacyMode });
 
   const server = new Server(
@@ -94,7 +94,7 @@ async function main() {
   /** Versión de protocolo negociada; se captura interceptando el initialize. */
   let negotiatedVersion = null;
   const mcpTrustedContext = () => {
-    const token = process.env.GHOSTPC_MCP_SESSION_TOKEN;
+    const token = process.env.JERICHO_MCP_SESSION_TOKEN;
     if (!token) return null;
     try { return runtime.sessionAuthority.authenticate(token); } catch (e) { return null; }
   };
@@ -106,14 +106,14 @@ async function main() {
     return {
       tools: tools.map(({ outputSchema, _meta, ...rest }) => ({
         ...rest,
-        description: `${rest.description}\n\n[GhostPC ${_meta['ghostpc/version']} · riesgo ${_meta['ghostpc/risk']}]`,
+        description: `${rest.description}\n\n[Jericho ${_meta['jericho/version']} · riesgo ${_meta['jericho/risk']}]`,
       })),
     };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const token = process.env.GHOSTPC_MCP_SESSION_TOKEN;
+    const token = process.env.JERICHO_MCP_SESSION_TOKEN;
     const result = await dispatcher.call(name, args, token ? { sessionToken: token } : null);
     if (supportsStructured(negotiatedVersion)) return result;
     // Cliente antiguo: sólo contenido textual.
@@ -161,7 +161,7 @@ async function main() {
     return innerOnMessage(message, extra);
   };
 
-  logger.info('GhostPC listo', {
+  logger.info('Jericho listo', {
     version: config.serverVersion,
     perfiles: runtime.policy.profiles,
     herramientas: dispatcher.listTools().length,
@@ -197,6 +197,6 @@ async function main() {
 
 main().catch((err) => {
   // Los errores de arranque también se redactan: pueden contener rutas y valores.
-  logger.error('Error fatal al iniciar GhostPC', { error: redact.redactText(err.message), stack: redact.redactText(err.stack || '') });
+  logger.error('Error fatal al iniciar Jericho', { error: redact.redactText(err.message), stack: redact.redactText(err.stack || '') });
   process.exit(1);
 });

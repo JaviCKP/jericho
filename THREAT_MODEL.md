@@ -1,4 +1,4 @@
-# THREAT_MODEL.md — Modelo de amenazas de GhostPC v2
+# THREAT_MODEL.md — Modelo de amenazas de Jericho v2
 
 **Ámbito:** servidor MCP local que da a un modelo remoto (ChatGPT Web, vía túnel de OpenAI)
 acceso al sistema de archivos, procesos, red y escritorio de un PC personal.
@@ -18,7 +18,7 @@ de seguridad puede depender de que el modelo se porte bien.
 └──────────────────────────────────────┬──────────────────────────────────────────┘
                                        │ JSON-RPC sobre stdio
 ┌──────────────────────────────────────▼──────────────────────────────────────────┐
-│                        GhostPC (lo que SÍ controlamos)                           │
+│                        Jericho (lo que SÍ controlamos)                           │
 │  ┌────────────────────────────────────────────────────────────────────────┐     │
 │  │  Dispatcher: valida esquema -> deriva identidad -> calcula efectos      │     │
 │  │              -> PolicyEngine -> ejecuta -> valida salida -> redacta     │     │
@@ -35,7 +35,7 @@ de seguridad puede depender de que el modelo se porte bien.
 **Zona de control (fuera de todas las raíces, inaccesible para cualquier herramienta):**
 `data/control/` — política, diario de auditoría, aprobaciones, estado de procesos.
 `data/memory/` — memoria v2.
-Comprobado en `tests/security/paths.test.js` ("rutas de control de GhostPC no accesibles").
+Comprobado en `tests/security/paths.test.js` ("rutas de control de Jericho no accesibles").
 
 ---
 
@@ -93,10 +93,10 @@ código malicioso durante `npm install` o durante los tests.
 | Los procesos hijo NO heredan `process.env`: sólo `env_passthrough` | `exec/program.js` |
 | `npm publish`, `npm login`, `npm token` y `npm config` están prohibidos | `policy/defaults.js` |
 | Timeout, tope de salida, TTL y matado del árbol de procesos | `exec/runner.js` |
-| Sólo se pueden detener procesos creados por GhostPC | `exec/registry.js` |
+| Sólo se pueden detener procesos creados por Jericho | `exec/registry.js` |
 
 **Riesgo residual ALTO y explícito:** un `npm install` o un `npm test` ejecutan código
-arbitrario de terceros con los privilegios del usuario. GhostPC **no** ejecuta esos procesos
+arbitrario de terceros con los privilegios del usuario. Jericho **no** ejecuta esos procesos
 en un sandbox del sistema operativo. Ver §5.
 
 ### A5 · Proceso local malicioso
@@ -197,10 +197,10 @@ o un proceso imprime texto que parece una instrucción del sistema.
 ## 3. Qué NO defiende este modelo
 
 1. **Ejecución de código de terceros dentro de la allowlist.** `npm test` ejecuta lo que diga
-   `package.json` del proyecto. Si el proyecto es malicioso, GhostPC no lo detiene.
+   `package.json` del proyecto. Si el proyecto es malicioso, Jericho no lo detiene.
    *Mitigación real:* no abrir proyectos no confiables; usar una VM.
 2. **Un atacante local con los privilegios del usuario.** Puede reescribir el diario entero,
-   la política y el `.env`. GhostPC protege del modelo, no del dueño de la sesión de Windows.
+   la política y el `.env`. Jericho protege del modelo, no del dueño de la sesión de Windows.
 3. **El binario `bin/tunnel-client.exe` y el panel `127.0.0.1:8080/ui`.** Son código propietario
    de OpenAI que no está en este repositorio. No podemos auditar su autenticación, su protección
    CSRF ni su validación de `Origin`/`Host`. Ver AUDIT.md P2-8.

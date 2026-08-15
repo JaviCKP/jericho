@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { resolveProgram, assertSubcommandAllowed } = require('../../src/core/exec/program');
 const { ExecRunner } = require('../../src/core/exec/runner');
-const { GhostError, CODES } = require('../../src/core/errors');
+const { JerichoError, CODES } = require('../../src/core/errors');
 
 const policy = {
   exec: {
@@ -38,7 +38,7 @@ test('known indirect execution forms are blocked before argv parsing', () => {
 
 test('denied git operations cannot hide behind options', () => {
   for (const args of [['--', 'push'], ['--config=push'], ['-c', 'push'], ['--foo', 'config']]) {
-    assert.throws(() => assertSubcommandAllowed('git', args, policy.exec), GhostError);
+    assert.throws(() => assertSubcommandAllowed('git', args, policy.exec), JerichoError);
   }
 });
 

@@ -1,4 +1,4 @@
-# ARCHITECTURE_V2.md — Arquitectura de GhostPC v2
+# ARCHITECTURE_V2.md — Arquitectura de Jericho v2
 
 ## 1. La arquitectura anterior (v1), en una frase
 
@@ -58,7 +58,7 @@ src/
   config.js                 rutas y directorio de CONTROL (fuera de las raíces)
   server/
     instructions.js         guía para el modelo (NO es el mecanismo de seguridad)
-    resources.js            ghostpc://policy | memory/index | rules | activity | approvals
+    resources.js            jericho://policy | memory/index | rules | activity | approvals
     prompts.js              4 flujos seleccionables por la persona
   core/
     risk.js                 R0..R4
@@ -149,7 +149,7 @@ argumento del modelo no puede influir a la baja.
 
 ### 4.9 Captura nativa en Windows
 `screenshot-desktop` genera un `.bat` que invoca un `.exe` del directorio actual; con
-`NoDefaultCurrentDirectoryInExePath=1` (habitual en entornos endurecidos) falla. GhostPC captura
+`NoDefaultCurrentDirectoryInExePath=1` (habitual en entornos endurecidos) falla. Jericho captura
 con `System.Drawing.CopyFromScreen` vía PowerShell: menos dependencias, captura directa de la
 región pedida y coordenadas de pantalla virtual (monitores con origen negativo funcionan solos).
 
@@ -177,7 +177,7 @@ en el diario.
 Verificado con un cliente JSON-RPC propio en `tests/contract/protocol.test.js` (19/19).
 
 **Extensión MCP Tasks:** NO implementada. El SDK 1.30.0 la soporta, pero las operaciones largas
-de GhostPC ya se resuelven con `terminal.exec(action="start_background")` + `logs`, que además
+de Jericho ya se resuelven con `terminal.exec(action="start_background")` + `logs`, que además
 persiste entre reinicios. Adoptarla exigiría duplicar el modelo de estado. Queda documentado
 como decisión, no como olvido.
 

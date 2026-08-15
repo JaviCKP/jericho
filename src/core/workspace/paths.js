@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 
 const isWindows = process.platform === 'win32';
 
@@ -88,36 +88,36 @@ function isInside(child, parent) {
  */
 function rejectDangerousForm(raw) {
   if (typeof raw !== 'string' || raw.length === 0) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, 'La ruta debe ser una cadena no vacía.');
+    throw new JerichoError(CODES.INVALID_ARGUMENT, 'La ruta debe ser una cadena no vacía.');
   }
   if (raw.includes('\0')) {
-    throw new GhostError(CODES.PATH_DENIED, 'La ruta contiene un byte NUL.');
+    throw new JerichoError(CODES.PATH_DENIED, 'La ruta contiene un byte NUL.');
   }
   if (raw.length > 4096) {
-    throw new GhostError(CODES.PATH_DENIED, 'Ruta demasiado larga.');
+    throw new JerichoError(CODES.PATH_DENIED, 'Ruta demasiado larga.');
   }
   // UNC y espacios de nombres de dispositivo de Windows.
   if (/^(\\\\|\/\/)/.test(raw)) {
-    throw new GhostError(CODES.PATH_DENIED, 'Las rutas UNC / de red no están permitidas.', {
+    throw new JerichoError(CODES.PATH_DENIED, 'Las rutas UNC / de red no están permitidas.', {
       details: { form: 'unc' },
     });
   }
   if (/^\\\\[?.]\\/.test(raw) || /^[\\/]{2}[?.][\\/]/.test(raw)) {
-    throw new GhostError(CODES.PATH_DENIED, 'Los espacios de nombres de dispositivo (\\\\?\\, \\\\.\\) no están permitidos.');
+    throw new JerichoError(CODES.PATH_DENIED, 'Los espacios de nombres de dispositivo (\\\\?\\, \\\\.\\) no están permitidos.');
   }
   // Flujos de datos alternativos de NTFS: "archivo.txt:oculto".
   const withoutDrive = /^[a-zA-Z]:/.test(raw) ? raw.slice(2) : raw;
   if (withoutDrive.includes(':')) {
-    throw new GhostError(CODES.PATH_DENIED, 'Los flujos de datos alternativos (ADS) no están permitidos.');
+    throw new JerichoError(CODES.PATH_DENIED, 'Los flujos de datos alternativos (ADS) no están permitidos.');
   }
   // Nombres de dispositivo reservados de Windows en cualquier segmento.
   for (const seg of raw.split(/[\\/]+/)) {
     if (seg && WIN_RESERVED.test(seg)) {
-      throw new GhostError(CODES.PATH_DENIED, `Nombre de dispositivo reservado no permitido: ${seg}`);
+      throw new JerichoError(CODES.PATH_DENIED, `Nombre de dispositivo reservado no permitido: ${seg}`);
     }
     // Nombres cortos 8.3 (PROGRA~1) evitan comparaciones por prefijo.
     if (/~\d+$/.test(seg)) {
-      throw new GhostError(CODES.PATH_DENIED, `Los nombres cortos 8.3 no están permitidos: ${seg}`);
+      throw new JerichoError(CODES.PATH_DENIED, `Los nombres cortos 8.3 no están permitidos: ${seg}`);
     }
   }
   return raw;
@@ -140,7 +140,7 @@ function realpathDeepest(absolute) {
     } catch (err) {
       if (err.code !== 'ENOENT') {
         // EACCES/EPERM: no podemos canonicalizar -> tratamos como denegado.
-        throw new GhostError(CODES.PATH_DENIED, `No se puede canonicalizar la ruta: ${err.code}`, {
+        throw new JerichoError(CODES.PATH_DENIED, `No se puede canonicalizar la ruta: ${err.code}`, {
           details: { code: err.code },
         });
       }
@@ -150,7 +150,7 @@ function realpathDeepest(absolute) {
       current = parent;
     }
   }
-  throw new GhostError(CODES.PATH_DENIED, 'Ruta demasiado profunda para canonicalizar.');
+  throw new JerichoError(CODES.PATH_DENIED, 'Ruta demasiado profunda para canonicalizar.');
 }
 
 function violatesDenylist(canonicalPath) {
@@ -178,7 +178,7 @@ function violatesDenylist(canonicalPath) {
 class Roots {
   /**
    * @param {Array<{name:string, path:string, write?:boolean}>} definitions
-   * @param {string[]} controlPaths rutas de control de GhostPC (política, diario,
+   * @param {string[]} controlPaths rutas de control de Jericho (política, diario,
    *        aprobaciones) que nunca deben ser accesibles por herramientas de archivo.
    */
   constructor(definitions, controlPaths = []) {
@@ -200,7 +200,7 @@ class Roots {
       });
     }
     if (this.roots.length === 0) {
-      throw new Error('GhostPC no puede arrancar sin al menos una raíz autorizada.');
+      throw new Error('Jericho no puede arrancar sin al menos una raíz autorizada.');
     }
     this.controlCanonical = controlPaths.map(canonicalize);
   }
@@ -245,7 +245,7 @@ class Roots {
     } else {
       const rootDef = opts.root ? this.byName(opts.root) : this.roots[0];
       if (!rootDef) {
-        throw new GhostError(CODES.ROOT_UNKNOWN, `Raíz autorizada desconocida: '${opts.root}'.`, {
+        throw new JerichoError(CODES.ROOT_UNKNOWN, `Raíz autorizada desconocida: '${opts.root}'.`, {
           details: { available: this.roots.map((r) => r.name) },
         });
       }
@@ -257,7 +257,7 @@ class Roots {
 
     const root = this.rootFor(canonical);
     if (!root) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.PATH_OUTSIDE_ROOT,
         'La ruta queda fuera de todas las raíces autorizadas.',
         {
@@ -274,7 +274,7 @@ class Roots {
     if (literalCanonical !== canonical) {
       const literalRoot = this.rootFor(literalCanonical);
       if (!literalRoot || literalRoot.name !== root.name) {
-        throw new GhostError(
+        throw new JerichoError(
           CODES.PATH_LINK_ESCAPE,
           'La ruta atraviesa un enlace simbólico o junction que cambia de raíz autorizada.',
           { details: { requestedRoot: literalRoot ? literalRoot.name : null, actualRoot: root.name } }
@@ -285,28 +285,28 @@ class Roots {
     if (!opts.allowControl) {
       for (const ctrl of this.controlCanonical) {
         if (isInside(canonical, ctrl)) {
-          throw new GhostError(
+          throw new JerichoError(
             CODES.PATH_DENIED,
-            'Las rutas de control de GhostPC (política, diario, aprobaciones) no son accesibles por herramientas.',
+            'Las rutas de control de Jericho (política, diario, aprobaciones) no son accesibles por herramientas.',
             { details: { control: ctrl } }
           );
         }
       }
       const denyReason = violatesDenylist(canonical);
       if (denyReason) {
-        throw new GhostError(CODES.PATH_DENIED, `Ruta excluida por política: ${denyReason}.`, {
+        throw new JerichoError(CODES.PATH_DENIED, `Ruta excluida por política: ${denyReason}.`, {
           details: { reason: denyReason },
         });
       }
     }
 
     if (opts.forWrite && !root.write) {
-      throw new GhostError(CODES.PATH_DENIED, `La raíz '${root.name}' es de sólo lectura.`);
+      throw new JerichoError(CODES.PATH_DENIED, `La raíz '${root.name}' es de sólo lectura.`);
     }
 
     const exists = fs.existsSync(real);
     if (opts.mustExist && !exists) {
-      throw new GhostError(CODES.PATH_NOT_FOUND, 'La ruta no existe.', {
+      throw new JerichoError(CODES.PATH_NOT_FOUND, 'La ruta no existe.', {
         recoverable: true,
         details: { relative: path.relative(root.path, real) },
       });
@@ -334,7 +334,7 @@ class Roots {
 /** Raíces por defecto derivadas del entorno. Nunca las puede ampliar el modelo. */
 function defaultRootDefinitions(env = process.env) {
   const home = env.USERPROFILE || env.HOME || os.homedir();
-  const spec = env.GHOSTPC_ROOTS;
+  const spec = env.JERICHO_ROOTS;
   if (spec) {
     return spec
       .split(',')

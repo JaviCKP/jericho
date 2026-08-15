@@ -85,9 +85,9 @@ function cmdApprove(runtime, argv) {
     console.error('No hay una solicitud pendiente con ese approval_id.');
     return 1;
   }
-  const operatorSecret = process.env.GHOSTPC_OPERATOR_SECRET;
+  const operatorSecret = process.env.JERICHO_OPERATOR_SECRET;
   if (!operatorSecret) {
-    console.error('GHOSTPC_OPERATOR_SECRET no está configurado; no se puede autenticar el canal de operador.');
+    console.error('JERICHO_OPERATOR_SECRET no está configurado; no se puede autenticar el canal de operador.');
     return 1;
   }
   const signature = require('crypto').createHmac('sha256', operatorSecret).update(`${id}:${pending.nonce}:${approve ? 'approve' : 'deny'}`).digest('hex');

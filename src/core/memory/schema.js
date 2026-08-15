@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 
 /**
  * Esquema versionado de la memoria v2.
@@ -16,7 +16,7 @@ const EVIDENCE_KINDS = ['command', 'test', 'file_hash', 'patch', 'observation', 
 const FACT_VOLATILITY = ['stable', 'volatile'];
 
 function fail(message, details) {
-  throw new GhostError(CODES.SCHEMA_INVALID, message, { details, recoverable: true });
+  throw new JerichoError(CODES.SCHEMA_INVALID, message, { details, recoverable: true });
 }
 
 function isStr(v) {

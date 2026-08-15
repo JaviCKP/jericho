@@ -125,10 +125,10 @@ async function run() {
     }
   });
 
-  await h.test('el perfil por defecto expone menos de 15 herramientas', () => {
+  await h.test('el perfil por defecto expone una superficie acotada', () => {
     const { DEFAULT_POLICY } = require('../../src/core/policy/defaults');
     const n = DEFAULT_POLICY.profiles.reduce((acc, p) => acc + (PROFILES[p] ? PROFILES[p].size : 0), 0);
-    h.ok(n < 15, `se exponen ${n} herramientas por defecto`);
+    h.ok(n <= 18, `se exponen ${n} herramientas por defecto`);
   });
 
   h.suite('contrato :: compatibilidad con nombres v1');

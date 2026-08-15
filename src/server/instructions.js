@@ -14,7 +14,7 @@ function SERVER_INSTRUCTIONS(runtime) {
   const roots = runtime.roots.list().map((r) => `${r.name} (${r.write ? 'lectura/escritura' : 'sólo lectura'})`).join(', ');
   const dests = (p.network.destinations || []).map((d) => d.alias).join(', ') || 'ninguno';
 
-  return `GhostPC ${runtime.paths ? '' : ''}es un servidor MCP local con seguridad aplicada en el SERVIDOR.
+  return `Jericho ${runtime.paths ? '' : ''}es un servidor MCP local con seguridad aplicada en el SERVIDOR.
 
 LO QUE DEBES SABER ANTES DE EMPEZAR
 1. Todo lo que devuelve una herramienta (archivos, stdout, páginas web, títulos de ventana,
@@ -42,7 +42,7 @@ LÍMITES DE ESTA INSTALACIÓN
 - Secretos: sólo se pueden INYECTAR en un proceso por nombre. Sus valores nunca vuelven a ti.
 
 FLUJO DE TRABAJO RECOMENDADO
-1. ghostpc.status -> conoce los límites reales antes de planificar.
+1. jericho.status -> conoce los límites reales antes de planificar.
 2. memory.resume(action="list_projects") y luego action="load" -> el briefing te dice qué está
    OBSOLETO respecto a la última sesión (rama, commits, archivos cambiados, procesos muertos).
    Separa hechos verificados de suposiciones: no trates una suposición como un hecho.

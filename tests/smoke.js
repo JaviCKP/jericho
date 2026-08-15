@@ -8,7 +8,7 @@ const { IMPLEMENTATIONS } = require('../src/tools');
 const { recover } = require('../src/core/runtime');
 
 (async () => {
-  const sb = makeSandbox({ env: { GHOSTPC_SESSION_AUTH_SECRET: 'smoke-session-secret' } });
+  const sb = makeSandbox({ env: { JERICHO_SESSION_AUTH_SECRET: 'smoke-session-secret' } });
   try {
     const rec = await recover(sb.runtime);
     console.log('recuperación:', JSON.stringify(rec.orphans), 'cadena diario válida:', rec.journal_chain.valid);
@@ -24,8 +24,8 @@ const { recover } = require('../src/core/runtime');
 
     sb.write('hola.txt', 'linea1\nlinea2\n');
 
-    const status = await call('ghostpc.status', {});
-    console.log('\nghostpc.status ok =', status.structuredContent.ok);
+    const status = await call('jericho.status', {});
+    console.log('\njericho.status ok =', status.structuredContent.ok);
 
     const read = await call('workspace.read', { paths: ['hola.txt'] });
     console.log('workspace.read ok =', read.structuredContent.ok, '| sha256 =', read.structuredContent.files[0].sha256.slice(0, 12));

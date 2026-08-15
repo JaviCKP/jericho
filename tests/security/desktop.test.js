@@ -20,7 +20,7 @@ const { ObservationStore } = require('../../src/core/desktop/observe');
 
 async function run() {
   const sb = makeSandbox({
-    env: { GHOSTPC_SESSION_AUTH_SECRET: 'desktop-test-session-secret' },
+    env: { JERICHO_SESSION_AUTH_SECRET: 'desktop-test-session-secret' },
     policy: {
       schema_version: 1,
       profiles: ['core_read', 'development', 'desktop'],

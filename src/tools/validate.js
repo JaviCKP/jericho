@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../core/errors');
+const { JerichoError, CODES } = require('../core/errors');
 
 /**
  * Validador de un subconjunto de JSON Schema, suficiente para los esquemas del
@@ -103,7 +103,7 @@ function validate(schema, value, pathStr = '', errors = [], opts = {}) {
 function assertValidInput(schema, value, toolName) {
   const errors = validate(schema, value === undefined ? {} : value);
   if (errors.length) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, `Argumentos inválidos para '${toolName}':\n  - ${errors.join('\n  - ')}`, {
+    throw new JerichoError(CODES.INVALID_ARGUMENT, `Argumentos inválidos para '${toolName}':\n  - ${errors.join('\n  - ')}`, {
       recoverable: true,
       details: { errors },
       remediation: 'Corrige los argumentos según el inputSchema publicado. No se aceptan campos no declarados.',

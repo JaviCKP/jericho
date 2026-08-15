@@ -3,7 +3,7 @@
 const { BY_NAME, toMcpTool } = require('./catalog');
 const { LEGACY_ALIASES } = require('./profiles');
 const { assertValidInput, checkOutput } = require('./validate');
-const { GhostError, CODES } = require('../core/errors');
+const { JerichoError, CODES } = require('../core/errors');
 const { newTraceId, validateExternalId, ANONYMOUS_SESSION } = require('../core/ids');
 const redact = require('../core/redact');
 
@@ -98,8 +98,8 @@ class Dispatcher {
           }
         }
         if (name === 'get_system_info' || name === 'get_system_health') {
-          this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'ghostpc.status', trace_id: traceId });
-          return this.call('ghostpc.status', {}, trustedContext);
+          this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'jericho.status', trace_id: traceId });
+          return this.call('jericho.status', {}, trustedContext);
         }
         if (name === 'list_windows' || name === 'get_open_windows') {
           this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'desktop.observe', trace_id: traceId });
@@ -114,11 +114,11 @@ class Dispatcher {
         return this._error(
           traceId,
           name,
-          new GhostError(
+          new JerichoError(
             CODES.NOT_FOUND,
             legacy.alias.tool
-              ? `'${name}' es una herramienta de GhostPC v1. Su equivalente es '${legacy.alias.tool}'.`
-              : `'${name}' se eliminó en GhostPC v2 y no tiene equivalente.`,
+              ? `'${name}' es una herramienta de Jericho v1. Su equivalente es '${legacy.alias.tool}'.`
+              : `'${name}' se eliminó en Jericho v2 y no tiene equivalente.`,
             {
               recoverable: !!legacy.alias.tool,
               remediation: [
@@ -135,7 +135,7 @@ class Dispatcher {
       return this._error(
         traceId,
         name,
-        new GhostError(CODES.NOT_FOUND, `Herramienta desconocida: '${name}'.`, {
+        new JerichoError(CODES.NOT_FOUND, `Herramienta desconocida: '${name}'.`, {
           details: { available: this.runtime.engine.enabledToolNames().sort() },
         }),
         started
@@ -144,7 +144,7 @@ class Dispatcher {
 
     const impl = this.impls[name];
     if (!impl) {
-      return this._error(traceId, name, new GhostError(CODES.INTERNAL, `'${name}' está en el catálogo pero no implementada.`), started);
+      return this._error(traceId, name, new JerichoError(CODES.INTERNAL, `'${name}' está en el catálogo pero no implementada.`), started);
     }
 
     let decision = null;
@@ -158,7 +158,7 @@ class Dispatcher {
       if (trustedContext && trustedContext.sessionToken) {
         authenticated = this.runtime.sessionAuthority.authenticate(trustedContext.sessionToken);
       } else if (trustedContext && trustedContext.session_id && trustedContext.user_id && trustedContext.project_id) {
-        throw new GhostError(CODES.POLICY_DENIED, 'El contexto de sesión debe venir firmado por la autoridad del servidor.');
+        throw new JerichoError(CODES.POLICY_DENIED, 'El contexto de sesión debe venir firmado por la autoridad del servidor.');
       }
       const session = authenticated ? {
         session_id: validateExternalId(authenticated.session_id, 'session_id'),
@@ -225,7 +225,7 @@ class Dispatcher {
       // 7. Conformidad con el outputSchema declarado.
       const outErrors = checkOutput(def.outputSchema, structured);
       if (outErrors.length) {
-        throw new GhostError(CODES.INTERNAL, `La salida de '${name}' no cumple su outputSchema: ${outErrors.join('; ')}`, {
+        throw new JerichoError(CODES.INTERNAL, `La salida de '${name}' no cumple su outputSchema: ${outErrors.join('; ')}`, {
           details: { errors: outErrors },
         });
       }
@@ -266,7 +266,7 @@ class Dispatcher {
   }
 
   _error(traceId, name, err, started, decision = null) {
-    const ghost = err instanceof GhostError ? err : new GhostError(CODES.INTERNAL, err && err.message ? err.message : String(err));
+    const ghost = err instanceof JerichoError ? err : new JerichoError(CODES.INTERNAL, err && err.message ? err.message : String(err));
     const structured = {
       ok: false,
       trace_id: traceId,

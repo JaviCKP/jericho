@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('./errors');
+const { JerichoError, CODES } = require('./errors');
 
 /**
  * Fachada Git segura.
@@ -38,26 +38,26 @@ class Git {
 
   _authorizeRepo(cwd) {
     if (!this.roots) {
-      throw new GhostError(CODES.PATH_OUTSIDE_ROOT, 'Git requiere una raíz autorizada para el repositorio.');
+      throw new JerichoError(CODES.PATH_OUTSIDE_ROOT, 'Git requiere una raíz autorizada para el repositorio.');
     }
     this.roots.resolve(cwd, { mustExist: true });
   }
 
   _assertSafeArgs(args) {
-    if (!Array.isArray(args)) throw new GhostError(CODES.INVALID_ARGUMENT, 'Argumentos Git inválidos.');
+    if (!Array.isArray(args)) throw new JerichoError(CODES.INVALID_ARGUMENT, 'Argumentos Git inválidos.');
     const forbidden = /^(?:-C|--git-dir(?:=|$)|--work-tree(?:=|$)|--upload-pack(?:=|$)|--receive-pack(?:=|$)|--exec-path(?:=|$)|--config-env(?:=|$))/i;
     const dangerous = new Set(['push', 'clean', 'reset', 'rebase', 'clone', 'remote']);
     for (const arg of args) {
       if (typeof arg !== 'string' || forbidden.test(arg)) {
-        throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'Opción Git no permitida por la fachada.');
+        throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, 'Opción Git no permitida por la fachada.');
       }
       if (/^(?:core\.sshCommand|diff\.external|core\.pager|pager\.|remote\..*\.(?:uploadpack|receivepack)|sshCommand)=/i.test(arg)) {
-        throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'Configuración Git externa no permitida por la fachada.');
+        throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, 'Configuración Git externa no permitida por la fachada.');
       }
     }
     const command = args.find((a) => !a.startsWith('-'));
     if (dangerous.has(String(command || '').toLowerCase())) {
-      throw new GhostError(CODES.COMMAND_NOT_ALLOWED, `La operación Git '${command}' no está disponible.`);
+      throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, `La operación Git '${command}' no está disponible.`);
     }
   }
 
@@ -128,21 +128,21 @@ class Git {
   /** Commit con mensaje pasado como argv separado: no hay inyección posible. */
   async commit(cwd, { message, files = [], allowEmpty = false, priorHead = null }, ctx = {}) {
     if (typeof message !== 'string' || message.trim().length === 0) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'El mensaje de commit es obligatorio.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'El mensaje de commit es obligatorio.');
     }
     if (message.length > 4000) {
-      throw new GhostError(CODES.LIMIT_EXCEEDED, 'Mensaje de commit demasiado largo (máx. 4000).');
+      throw new JerichoError(CODES.LIMIT_EXCEEDED, 'Mensaje de commit demasiado largo (máx. 4000).');
     }
     if (!Array.isArray(files) || files.length === 0) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.INVALID_ARGUMENT,
-        'Debes indicar explícitamente los archivos a incluir. GhostPC no hace `git add -A`: ' +
+        'Debes indicar explícitamente los archivos a incluir. Jericho no hace `git add -A`: ' +
           'eso mezclaría cambios de otra sesión que estuviera trabajando en el mismo árbol.'
       );
     }
     for (const file of files) {
       if (typeof file !== 'string' || file.length === 0 || file.startsWith('-') || file.includes('\0')) {
-        throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'El pathspec Git no puede ser una opción.');
+        throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, 'El pathspec Git no puede ser una opción.');
       }
     }
     const addArgs = ['add', '--', ...files];
@@ -178,7 +178,7 @@ class Git {
    */
   async revert(cwd, { commit }, ctx = {}) {
     if (typeof commit !== 'string' || !/^[0-9a-f]{7,40}$/i.test(commit)) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'El commit a revertir debe ser un hash hexadecimal.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'El commit a revertir debe ser un hash hexadecimal.');
     }
     const r = await this._git(['revert', '--no-edit', commit], cwd, ctx);
     return {

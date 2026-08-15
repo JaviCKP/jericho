@@ -21,9 +21,9 @@ const dataDir = path.join(rootDir, 'data');
  *
  * Invariante: está FUERA de toda raíz autorizada y la capa de rutas lo excluye
  * explícitamente, de modo que ninguna herramienta MCP puede leerlo ni escribirlo.
- * Se puede reubicar con GHOSTPC_CONTROL_DIR (sólo lo cambia una persona).
+ * Se puede reubicar con JERICHO_CONTROL_DIR (sólo lo cambia una persona).
  */
-const controlDir = process.env.GHOSTPC_CONTROL_DIR || path.join(dataDir, 'control');
+const controlDir = process.env.JERICHO_CONTROL_DIR || path.join(dataDir, 'control');
 
 const config = {
   rootDir: rootDir,
@@ -36,15 +36,15 @@ const config = {
   logLevel: process.env.LOG_LEVEL || 'INFO',
   enableGridOverlay: process.env.ENABLE_GRID_OVERLAY === 'true' || false,
 
-  // --- GhostPC v2 ---
+  // --- Jericho v2 ---
   controlDir: controlDir,
-  policyFile: process.env.GHOSTPC_POLICY_FILE || path.join(controlDir, 'policy.json'),
+  policyFile: process.env.JERICHO_POLICY_FILE || path.join(controlDir, 'policy.json'),
   journalDir: path.join(controlDir, 'journal'),
   approvalsDir: path.join(controlDir, 'approvals'),
   processStateFile: path.join(controlDir, 'processes.json'),
   /** Memoria v2. Vive junto al workspace pero con su propio directorio versionado. */
-  memoryDir: process.env.GHOSTPC_MEMORY_DIR || path.join(dataDir, 'memory'),
-  serverName: 'ghostpc',
+  memoryDir: process.env.JERICHO_MEMORY_DIR || path.join(dataDir, 'memory'),
+  serverName: 'jericho',
   serverVersion: require('../package.json').version,
 };
 

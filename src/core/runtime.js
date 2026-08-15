@@ -18,7 +18,7 @@ const { sweepTemp } = require('./atomic');
 const { SessionAuthority } = require('./session/authority');
 
 /**
- * Construye el runtime completo de GhostPC.
+ * Construye el runtime completo de Jericho.
  *
  * Orden importante:
  *  1. Redacción PRIMERO: cualquier cosa registrada después ya sale tachada.
@@ -54,7 +54,7 @@ function createRuntime(options = {}) {
   const approvals = new ApprovalStore(paths.approvalsDir, {
     ttlMs: (policy.approval.ttl_minutes || 15) * 60 * 1000,
     journal,
-    operatorSecret: env.GHOSTPC_OPERATOR_SECRET,
+    operatorSecret: env.JERICHO_OPERATOR_SECRET,
   });
 
   // 4. Raíces autorizadas. El directorio de control queda excluido siempre.
@@ -89,7 +89,7 @@ function createRuntime(options = {}) {
     profiles: options.profiles || {},
   });
   const sessionAuthority = new SessionAuthority({
-    secret: env.GHOSTPC_SESSION_AUTH_SECRET,
+    secret: env.JERICHO_SESSION_AUTH_SECRET,
     policyRevision: require('crypto').createHash('sha256').update(JSON.stringify(policy)).digest('hex'),
   });
 

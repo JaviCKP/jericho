@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 
 /**
  * Únicos códigos que abren el circuit breaker: fallos de EJECUCIÓN reales.
@@ -56,7 +56,7 @@ class Metrics {
     const e = this._entry(tool);
     if (e.breaker_open_until > Date.now()) {
       const secs = Math.ceil((e.breaker_open_until - Date.now()) / 1000);
-      throw new GhostError(
+      throw new JerichoError(
         CODES.CIRCUIT_OPEN,
         `'${tool}' ha fallado ${e.consecutive_failures} veces seguidas; en enfriamiento ${secs}s.`,
         {

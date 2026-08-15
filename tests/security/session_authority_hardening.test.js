@@ -25,7 +25,7 @@ async function run() {
     assert.throws(() => new SessionAuthority({ policyRevision: 'r1' }).authenticate(token), /configurada/);
   });
   await h.test('approval requires authenticated operator and is one-shot', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-approval-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jericho-approval-'));
     const store = new ApprovalStore(dir, { ttlMs: 60_000, operatorSecret: 'test-op' });
     const req = store.request({ tool: 'x', args: { n: 1 }, risk: 'R3', reason: 'x', summary: 'x', sessionId: 'sA', userId: 'uA', projectId: 'pA' });
     assert.throws(() => store.decide(req.approval_id, true, 'model'), /operador autenticado/);
@@ -44,15 +44,15 @@ async function run() {
   await h.test('resources require authenticated context and isolate projects', () => {
     const runtime = { memory: { readIndex: () => ({ projects: [{ project_id: 'pA', items: [] }, { project_id: 'pB', items: [] }] }), get: () => ({}) }, engine: { describe: () => ({}) }, approvals: { listPending: () => [{ session_id: 'sA', user_id: 'uA', project_id: 'pA' }, { session_id: 'sB', user_id: 'uB', project_id: 'pB' }] }, journal: { verify: () => ({}), tail: () => [{ session_id: 'sA', project_id: 'pA', ok: 1 }, { session_id: 'sB', project_id: 'pB', secret: 'B' }] }, metrics: { snapshot: () => ({ global: 1 }) } };
     assert.throws(() => listResources(runtime, null), /autenticado/);
-    const out = readResource(runtime, 'ghostpc://memory/index', { session_id: 'sA', user_id: 'uA', project_id: 'pA' });
+    const out = readResource(runtime, 'jericho://memory/index', { session_id: 'sA', user_id: 'uA', project_id: 'pA' });
     assert(!out.contents[0].text.includes('pB'));
-    assert.throws(() => readResource(runtime, 'ghostpc://memory/pB/x', { session_id: 'sA', user_id: 'uA', project_id: 'pA' }), /otro proyecto/);
-    const activity = readResource(runtime, 'ghostpc://activity', { session_id: 'sA', user_id: 'uA', project_id: 'pA' });
+    assert.throws(() => readResource(runtime, 'jericho://memory/pB/x', { session_id: 'sA', user_id: 'uA', project_id: 'pA' }), /otro proyecto/);
+    const activity = readResource(runtime, 'jericho://activity', { session_id: 'sA', user_id: 'uA', project_id: 'pA' });
     assert(activity.contents[0].text.includes('"ok": 1'));
     assert(!activity.contents[0].text.includes('"secret"'));
   });
   await h.test('rollback enforces owner and compare-and-swap conflict', async () => {
-    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-rb-')), 'a.txt');
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'jericho-rb-')), 'a.txt');
     fs.writeFileSync(file, 'new');
     const entry = { state: [{ absolute: file, existed: true, before: 'old', after_hash: sha256Text('new') }], session_id: 'sA', user_id: 'uA', project_id: 'pA', expires_at: Date.now() + 1000 };
     const ctx = { dispatcher: { rollbacks: new Map([['rb_x', entry]]) }, session: { session_id: 'sB', user_id: 'uB', project_id: 'pB' }, runtime: { metrics: { bump() {} }, journal: { append() {} } }, trace_id: 't' };

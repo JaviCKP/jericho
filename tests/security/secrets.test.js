@@ -23,7 +23,7 @@ async function run() {
     env: {
       CONTROL_PLANE_API_KEY: SECRET,
       GITHUB_TOKEN: TOKEN,
-      GHOSTPC_SESSION_AUTH_SECRET: 'synthetic-session-authority-secret',
+      JERICHO_SESSION_AUTH_SECRET: 'synthetic-session-authority-secret',
     },
     policy: {
       schema_version: 1,

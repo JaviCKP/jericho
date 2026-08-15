@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 
 const isWindows = process.platform === 'win32';
 
@@ -50,18 +50,18 @@ function hasControlChars(s) {
 function validateArg(arg, index, opts) {
   const strict = !!(opts && opts.strict);
   if (typeof arg !== 'string') {
-    throw new GhostError(CODES.INVALID_ARGUMENT, `El argumento ${index} debe ser una cadena.`);
+    throw new JerichoError(CODES.INVALID_ARGUMENT, `El argumento ${index} debe ser una cadena.`);
   }
   if (arg.length > 4096) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, `El argumento ${index} es demasiado largo.`);
+    throw new JerichoError(CODES.INVALID_ARGUMENT, `El argumento ${index} es demasiado largo.`);
   }
   if (hasControlChars(arg)) {
-    throw new GhostError(CODES.COMMAND_NOT_ALLOWED, `El argumento ${index} contiene caracteres de control no permitidos.`);
+    throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, `El argumento ${index} contiene caracteres de control no permitidos.`);
   }
   if (strict) {
     const bad = arg.match(FORBIDDEN_ARG_CHARS);
     if (bad) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.COMMAND_NOT_ALLOWED,
         `El argumento ${index} contiene ${JSON.stringify(bad[0])}, que cmd.exe reinterpretaría al invocar este lanzador .cmd/.bat.`,
         {
@@ -78,10 +78,10 @@ function validateArg(arg, index, opts) {
 
 function validateArgs(args = [], opts = {}) {
   if (!Array.isArray(args)) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, 'args debe ser una lista de cadenas.');
+    throw new JerichoError(CODES.INVALID_ARGUMENT, 'args debe ser una lista de cadenas.');
   }
   if (args.length > 64) {
-    throw new GhostError(CODES.LIMIT_EXCEEDED, 'Demasiados argumentos (máx. 64).');
+    throw new JerichoError(CODES.LIMIT_EXCEEDED, 'Demasiados argumentos (máx. 64).');
   }
   return args.map((a, i) => validateArg(a, i, opts));
 }
@@ -112,22 +112,22 @@ function findOnPath(name, env = process.env) {
  */
 function resolveProgram(name, policyExec, env = process.env) {
   if (typeof name !== 'string' || name.length === 0) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, 'Debes indicar el programa a ejecutar.');
+    throw new JerichoError(CODES.INVALID_ARGUMENT, 'Debes indicar el programa a ejecutar.');
   }
   if (/[\\/]/.test(name) || path.isAbsolute(name)) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,
       'El programa debe ser un nombre de la allowlist, no una ruta.',
       { details: { received: name }, remediation: `Programas permitidos: ${policyExec.allowed_programs.join(', ')}` }
     );
   }
   if (FORBIDDEN_ARG_CHARS.test(name)) {
-    throw new GhostError(CODES.COMMAND_NOT_ALLOWED, 'El nombre del programa contiene caracteres no permitidos.');
+    throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, 'El nombre del programa contiene caracteres no permitidos.');
   }
 
   const bare = name.toLowerCase().replace(/\.(exe|cmd|bat|com)$/, '');
   if (GENERIC_EXECUTABLES.has(bare)) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,
       `La ejecuciÃ³n genÃ©rica de '${bare}' estÃ¡ desactivada: requiere un action_id definido fuera del repositorio.`,
       {
@@ -137,21 +137,21 @@ function resolveProgram(name, policyExec, env = process.env) {
     );
   }
   if (!policyExec.allowed_programs.map((p) => p.toLowerCase()).includes(bare)) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,
       `El programa '${name}' no está en la allowlist de ejecución.`,
       {
         details: { allowed: policyExec.allowed_programs },
         remediation:
           'Una persona debe añadirlo a exec.allowed_programs en data/control/policy.json. ' +
-          'GhostPC no expone una terminal general.',
+          'Jericho no expone una terminal general.',
       }
     );
   }
 
   const executable = findOnPath(bare, env) || (isWindows ? findOnPath(name, env) : null);
   if (!executable) {
-    throw new GhostError(CODES.COMMAND_NOT_ALLOWED, `El programa '${bare}' está permitido pero no se encuentra en PATH.`, {
+    throw new JerichoError(CODES.COMMAND_NOT_ALLOWED, `El programa '${bare}' está permitido pero no se encuentra en PATH.`, {
       recoverable: true,
     });
   }
@@ -205,7 +205,7 @@ function assertSubcommandAllowed(program, args, policyExec) {
   }
   const sub = candidates.find((candidate) => deniedSet.has(candidate));
   if (sub) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.COMMAND_NOT_ALLOWED,
       `'${program} ${sub}' está prohibido por política.`,
       {
@@ -232,8 +232,8 @@ function buildChildEnv(policyExec, extra = {}, parentEnv = process.env) {
   const merged = currentPath.includes(nodeDir) ? currentPath : `${nodeDir}${sep}${currentPath}`;
   env.PATH = merged;
   if (isWindows) env.Path = merged;
-  // Marcador para que los procesos hijos sepan que los lanzó GhostPC.
-  env.GHOSTPC_MANAGED = '1';
+  // Marcador para que los procesos hijos sepan que los lanzó Jericho.
+  env.JERICHO_MANAGED = '1';
   return { ...env, ...extra };
 }
 

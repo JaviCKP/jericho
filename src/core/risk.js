@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Niveles de riesgo de GhostPC.
+ * Niveles de riesgo de Jericho.
  *
  * El nivel lo declara el catálogo de herramientas y lo puede ELEVAR el PolicyEngine
  * en función de los efectos concretos de la llamada (p. ej. una escritura fuera del

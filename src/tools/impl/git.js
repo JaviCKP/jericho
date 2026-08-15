@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 const { Git } = require('../../core/git');
 
 /**
@@ -29,7 +29,7 @@ function repoRelative(file, repo, args, ctx) {
   const resolved = ctx.runtime.roots.resolve(file, { root: args.root });
   const rel = path.relative(repo.absolute, resolved.absolute).replace(/\\/g, '/');
   if (rel === '' || rel.startsWith('../')) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.PATH_OUTSIDE_ROOT,
       `'${file}' está fuera del repositorio '${repo.relative || '.'}'.`,
       { recoverable: true, details: { repo: repo.relative || '.', resolved: resolved.relative } }
@@ -46,7 +46,7 @@ const inspect = {
     const gctx = { session: ctx.session, traceId: ctx.trace_id, tool: 'git.inspect' };
 
     if (!(await git.isRepo(repo.absolute, gctx))) {
-      throw new GhostError(CODES.NOT_FOUND, `'${repo.relative || '.'}' no es un repositorio Git.`, { recoverable: true });
+      throw new JerichoError(CODES.NOT_FOUND, `'${repo.relative || '.'}' no es un repositorio Git.`, { recoverable: true });
     }
 
     if (args.action === 'status') {
@@ -113,25 +113,25 @@ const commit = {
     const gctx = { session: ctx.session, traceId: ctx.trace_id, tool: 'git.commit' };
 
     if (!(await git.isRepo(repo.absolute, gctx))) {
-      throw new GhostError(CODES.NOT_FOUND, `'${repo.relative || '.'}' no es un repositorio Git.`, { recoverable: true });
+      throw new JerichoError(CODES.NOT_FOUND, `'${repo.relative || '.'}' no es un repositorio Git.`, { recoverable: true });
     }
 
     if (args.action === 'revert') {
-      if (!args.commit) throw new GhostError(CODES.INVALID_ARGUMENT, 'commit es obligatorio para revert.');
+      if (!args.commit) throw new JerichoError(CODES.INVALID_ARGUMENT, 'commit es obligatorio para revert.');
       if (ctx.dryRun) {
         return { action: 'revert', dry_run: true, commit: args.commit, __text: `[SIMULACIÓN] git revert --no-edit ${args.commit}` };
       }
       const res = await git.revert(repo.absolute, { commit: args.commit }, gctx);
-      if (!res.ok) throw new GhostError(CODES.INTERNAL, `git revert falló: ${res.error}`, { recoverable: true });
+      if (!res.ok) throw new JerichoError(CODES.INTERNAL, `git revert falló: ${res.error}`, { recoverable: true });
       return { action: 'revert', commit: res.new_head, previous_head: args.commit, __text: res.output };
     }
 
     // action === 'commit'
-    if (!args.message) throw new GhostError(CODES.INVALID_ARGUMENT, 'message es obligatorio.');
+    if (!args.message) throw new JerichoError(CODES.INVALID_ARGUMENT, 'message es obligatorio.');
     if (!args.files || !args.files.length) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.INVALID_ARGUMENT,
-        'files es obligatorio. GhostPC no hace `git add -A`: eso mezclaría cambios de otra sesión.',
+        'files es obligatorio. Jericho no hace `git add -A`: eso mezclaría cambios de otra sesión.',
         { recoverable: true, remediation: 'Usa git.inspect(status) y enumera los archivos que quieres incluir.' }
       );
     }
@@ -157,7 +157,7 @@ const commit = {
 
     const res = await git.commit(repo.absolute, { message: args.message, files: relFiles, priorHead }, gctx);
     if (!res.ok) {
-      throw new GhostError(CODES.INTERNAL, `git ${res.stage} falló: ${res.error}`, { recoverable: true });
+      throw new JerichoError(CODES.INTERNAL, `git ${res.stage} falló: ${res.error}`, { recoverable: true });
     }
 
     ctx.runtime.journal.append({

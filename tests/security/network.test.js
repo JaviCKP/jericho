@@ -33,7 +33,7 @@ async function run() {
   const internalPort = internal.address().port;
 
   const sb = makeSandbox({
-    env: { GHOSTPC_SESSION_AUTH_SECRET: 'network-test-session-secret', GHOSTPC_OPERATOR_SECRET: 'network-test-operator-secret' },
+    env: { JERICHO_SESSION_AUTH_SECRET: 'network-test-session-secret', JERICHO_OPERATOR_SECRET: 'network-test-operator-secret' },
     policy: {
       schema_version: 1,
       profiles: ['core_read', 'development', 'network'],

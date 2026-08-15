@@ -29,7 +29,7 @@ async function run() {
       const other = await d.call('terminal.exec', { action: 'list', ...B });
       h.equal(other.structuredContent.processes.length, 0);
     });
-    await h.test('logs y stop exigen un proceso GhostPC existente', async () => {
+    await h.test('logs y stop exigen un proceso Jericho existente', async () => {
       const id = 'proc_inventado_aaaaaaaaaaaa';
       h.deniedWith(await d.call('terminal.exec', { action: 'logs', proc_id: id, ...A }), 'NOT_FOUND');
       h.deniedWith(await d.call('terminal.exec', { action: 'stop', proc_id: id, ...B }), 'NOT_FOUND');

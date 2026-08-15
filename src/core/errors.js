@@ -1,15 +1,15 @@
 'use strict';
 
 /**
- * Errores tipados de GhostPC.
+ * Errores tipados de Jericho.
  *
  * `recoverable` indica al modelo si tiene sentido reintentar tras CAMBIAR una condición.
  * Nunca debe reintentarse la misma llamada idéntica ante un error no recuperable.
  */
-class GhostError extends Error {
+class JerichoError extends Error {
   constructor(code, message, opts = {}) {
     super(message);
-    this.name = 'GhostError';
+    this.name = 'JerichoError';
     this.code = code;
     this.recoverable = opts.recoverable === true;
     this.remediation = opts.remediation || null;
@@ -76,6 +76,6 @@ const CODES = {
   INTERNAL: 'INTERNAL',
 };
 
-const deny = (code, message, opts) => new GhostError(code, message, opts);
+const deny = (code, message, opts) => new JerichoError(code, message, opts);
 
-module.exports = { GhostError, CODES, deny };
+module.exports = { JerichoError, CODES, deny };

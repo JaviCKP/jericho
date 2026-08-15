@@ -28,7 +28,7 @@ function diff(file, before, after) {
 }
 
 async function run() {
-  const sb = makeSandbox({ env: { GHOSTPC_SESSION_AUTH_SECRET: 'patch-test-session-secret', GHOSTPC_OPERATOR_SECRET: 'patch-test-operator-secret' } });
+  const sb = makeSandbox({ env: { JERICHO_SESSION_AUTH_SECRET: 'patch-test-session-secret', JERICHO_OPERATOR_SECRET: 'patch-test-operator-secret' } });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const S = { session_id: 'ses_patch' };
   const callAs = (name, args, project = 'patch') => {

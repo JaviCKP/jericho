@@ -31,11 +31,11 @@ const PROFILE_DESCRIPTIONS = {
  *
  * No se ejecutan automáticamente; el servidor devuelve un error explicativo con
  * la equivalencia para que una conversación antigua no falle en silencio.
- * Se puede activar la traducción automática con GHOSTPC_LEGACY_ALIASES=translate.
+ * Se puede activar la traducción automática con JERICHO_LEGACY_ALIASES=translate.
  */
 const LEGACY_ALIASES = {
   // task_engine
-  get_agent_protocol: { tool: 'ghostpc.status', note: 'Las reglas ya no son un prompt: son política del servidor. ghostpc.status devuelve los límites reales.' },
+  get_agent_protocol: { tool: 'jericho.status', note: 'Las reglas ya no son un prompt: son política del servidor. jericho.status devuelve los límites reales.' },
   list_pending_tasks: { tool: 'memory.resume', args: { action: 'list_items' } },
   resume_task_session: { tool: 'memory.resume', args: { action: 'load' } },
   save_or_update_task: { tool: 'memory.checkpoint', args: { action: 'update' }, note: 'Ahora exige expected_revision (compare-and-swap).' },
@@ -57,8 +57,8 @@ const LEGACY_ALIASES = {
   get_background_task_output: { tool: 'terminal.exec', args: { action: 'logs' } },
   kill_background_task: { tool: 'terminal.exec', args: { action: 'stop' } },
   list_background_tasks: { tool: 'terminal.exec', args: { action: 'list' } },
-  get_environment_vars: { tool: 'ghostpc.status', note: 'ELIMINADA. Los valores de entorno nunca vuelven al modelo. ghostpc.status lista los NOMBRES de secretos disponibles.' },
-  get_system_info: { tool: 'ghostpc.status' },
+  get_environment_vars: { tool: 'jericho.status', note: 'ELIMINADA. Los valores de entorno nunca vuelven al modelo. jericho.status lista los NOMBRES de secretos disponibles.' },
+  get_system_info: { tool: 'jericho.status' },
   // checkpoints
   save_context_checkpoint: { tool: 'memory.checkpoint', args: { action: 'update' } },
   load_context_checkpoint: { tool: 'memory.resume', args: { action: 'load' } },
@@ -72,9 +72,9 @@ const LEGACY_ALIASES = {
   git_commit: { tool: 'git.commit', args: { action: 'commit' }, note: 'Ahora exige la lista explícita de archivos; no hay `git add -A`.' },
   git_branch: { tool: 'git.inspect', args: { action: 'branches' }, note: 'Crear/borrar/cambiar de rama se retiró del agente.' },
   // system_process
-  get_system_health: { tool: 'ghostpc.status', note: 'ELIMINADA como herramienta separada; los datos de sistema no aportaban al trabajo y filtraban información del host.' },
-  list_processes: { tool: 'terminal.exec', args: { action: 'list' }, note: 'Sólo se listan los procesos creados por GhostPC.' },
-  kill_process: { tool: 'terminal.exec', args: { action: 'stop' }, note: 'Sólo se pueden detener procesos creados por GhostPC, con verificación anti-reutilización de PID.' },
+  get_system_health: { tool: 'jericho.status', note: 'ELIMINADA como herramienta separada; los datos de sistema no aportaban al trabajo y filtraban información del host.' },
+  list_processes: { tool: 'terminal.exec', args: { action: 'list' }, note: 'Sólo se listan los procesos creados por Jericho.' },
+  kill_process: { tool: 'terminal.exec', args: { action: 'stop' }, note: 'Sólo se pueden detener procesos creados por Jericho, con verificación anti-reutilización de PID.' },
   open_app_or_url: { tool: null, note: 'ELIMINADA. Abrir aplicaciones o URLs arbitrarias era una ruta de exfiltración y de ejecución.' },
   // vision_gui
   take_screenshot: { tool: 'desktop.observe', args: { action: 'capture_window' }, note: 'Por defecto se captura una ventana, no la pantalla completa.' },

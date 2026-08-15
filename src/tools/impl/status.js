@@ -1,12 +1,12 @@
 'use strict';
 
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 const { PROFILE_DESCRIPTIONS } = require('../profiles');
 
 /**
- * ghostpc.status y admin.perform_allowlisted_action.
+ * jericho.status y admin.perform_allowlisted_action.
  *
- * `ghostpc.status` sustituye a `get_agent_protocol`: en lugar de PEDIR al modelo
+ * `jericho.status` sustituye a `get_agent_protocol`: en lugar de PEDIR al modelo
  * que se porte bien, le dice qué puede y qué no puede hacer realmente, porque
  * los límites los aplica el servidor.
  */
@@ -63,7 +63,7 @@ const status = {
 
 function renderStatus(p, ctx) {
   const L = [];
-  L.push('=== GhostPC — límites REALES de esta sesión ===');
+  L.push('=== Jericho — límites REALES de esta sesión ===');
   if (p.policy) {
     L.push(`perfiles activos: ${p.policy.profiles.join(', ')}`);
     L.push(`riesgo máximo: ${p.policy.max_risk} · aprobación humana obligatoria desde: ${p.policy.approval_required_at_or_above}`);
@@ -104,14 +104,14 @@ const admin = {
 
     const action = actions.find((a) => a.action_id === args.action_id);
     if (!action) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.COMMAND_NOT_ALLOWED,
         `Acción administrativa desconocida: '${args.action_id}'.`,
         {
           details: { available },
           remediation:
             'Sólo se pueden ejecutar acciones predefinidas por una persona en admin.actions de la política. ' +
-            'GhostPC no expone una terminal de administrador.',
+            'Jericho no expone una terminal de administrador.',
         }
       );
     }
@@ -147,6 +147,6 @@ const admin = {
 };
 
 module.exports = {
-  'ghostpc.status': status,
+  'jericho.status': status,
   'admin.perform_allowlisted_action': admin,
 };

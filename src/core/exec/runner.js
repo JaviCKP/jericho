@@ -1,7 +1,7 @@
 'use strict';
 
 const { spawn } = require('child_process');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const { resolveProgram, validateArgs, assertSubcommandAllowed, buildChildEnv } = require('./program');
 const redact = require('../redact');
 const { isElevated } = require('../../utils/platform');
@@ -46,14 +46,14 @@ class ExecRunner {
   _assertConcurrency(background) {
     const lim = this._limits();
     if (this.running >= lim.max_concurrent) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.LIMIT_EXCEEDED,
         `Ya hay ${this.running} procesos en ejecución (máx. ${lim.max_concurrent}).`,
         { recoverable: true, remediation: 'Espera a que terminen o detén alguno con terminal.processes.' }
       );
     }
     if (background && this.registry.countRunning() >= lim.max_background) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.LIMIT_EXCEEDED,
         `Ya hay ${this.registry.countRunning()} procesos en segundo plano (máx. ${lim.max_background}).`,
         { recoverable: true }
@@ -67,14 +67,14 @@ class ExecRunner {
    */
   plan({ program, args = [], cwd, secretNames = [] }) {
     if (isElevated()) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.COMMAND_NOT_ALLOWED,
         'El servidor estÃ¡ elevado; se rechazan procesos hijos generales al no existir aislamiento de privilegios demostrable.',
         { details: { reason: 'elevated_server_no_child_isolation' } }
       );
     }
     if (secretNames.length > 0) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.SECRET_NOT_ALLOWED,
         'No se entregan secretos a procesos hijos generales: no hay aislamiento de red del sistema operativo.',
         { details: { reason: 'child_network_unrestricted' }, remediation: 'Usa una acciÃ³n operator-defined con red restringida.' }
@@ -87,7 +87,7 @@ class ExecRunner {
     const safeArgs = validateArgs(args, { strict: viaCmd });
     assertSubcommandAllowed(resolved.name, safeArgs, this.policy.exec);
     if (!cwd) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'cwd es obligatorio: GhostPC no ejecuta procesos sin directorio de trabajo.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'cwd es obligatorio: Jericho no ejecuta procesos sin directorio de trabajo.');
     }
     for (const name of secretNames) {
       if (!this.secrets.isAvailable(name)) {
@@ -155,7 +155,7 @@ class ExecRunner {
             detached: !isWindows, // grupo propio en POSIX para poder matar el árbol
           });
         } catch (err) {
-          return reject(new GhostError(CODES.INTERNAL, `No se pudo lanzar '${plan.program}': ${err.message}`));
+          return reject(new JerichoError(CODES.INTERNAL, `No se pudo lanzar '${plan.program}': ${err.message}`));
         }
 
         procId = this.registry.register({
@@ -228,7 +228,7 @@ class ExecRunner {
           settled = true;
           clearTimeout(timer);
           this.registry.markExit(procId, -1);
-          reject(new GhostError(CODES.INTERNAL, `Fallo ejecutando '${plan.program}': ${err.message}`, { recoverable: true }));
+          reject(new JerichoError(CODES.INTERNAL, `Fallo ejecutando '${plan.program}': ${err.message}`, { recoverable: true }));
         });
         child.on('close', (code) => finish(code));
       });

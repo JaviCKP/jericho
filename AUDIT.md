@@ -1,4 +1,4 @@
-# AUDIT.md — Auditoría de línea base de GhostPC / Jericho
+# AUDIT.md — Auditoría de línea base de Jericho / Jericho
 
 **Commit auditado:** `ad48abb` (rama `main`, árbol limpio)
 **Fecha:** 2026-08-15
@@ -183,7 +183,7 @@ El commit se hizo **y** se ejecutó el comando inyectado.
 `system_process.js:160` construye `taskkill /IM "<processName>" /F /T`. Prueba ejecutada:
 
 ```
-processName = 'zzz_nope" & echo pwned> %TEMP%\GHOSTPC_INJ_KILL.txt & rem "'
+processName = 'zzz_nope" & echo pwned> %TEMP%\JERICHO_INJ_KILL.txt & rem "'
 → shell injection: true
 ```
 

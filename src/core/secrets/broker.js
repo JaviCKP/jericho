@@ -1,6 +1,6 @@
 'use strict';
 
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const redact = require('../redact');
 
 /**
@@ -47,11 +47,11 @@ class SecretBroker {
 
   _assertAllowed(name) {
     if (typeof name !== 'string' || !/^[A-Z][A-Z0-9_]*$/.test(name)) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'El nombre de secreto debe ser MAYUSCULAS_CON_GUION_BAJO.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'El nombre de secreto debe ser MAYUSCULAS_CON_GUION_BAJO.');
     }
     if (!this.allowed.has(name)) {
       if (this.metrics) this.metrics.bump('secrets_blocked');
-      throw new GhostError(
+      throw new JerichoError(
         CODES.SECRET_NOT_ALLOWED,
         `El secreto '${name}' no está en la lista autorizada.`,
         {
@@ -61,7 +61,7 @@ class SecretBroker {
       );
     }
     if (!this.isAvailable(name)) {
-      throw new GhostError(CODES.SECRET_NOT_AVAILABLE, `El secreto '${name}' está autorizado pero no definido en el entorno.`);
+      throw new JerichoError(CODES.SECRET_NOT_AVAILABLE, `El secreto '${name}' está autorizado pero no definido en el entorno.`);
     }
   }
 
@@ -114,7 +114,7 @@ class SecretBroker {
       const v = this.env[name];
       if (typeof v === 'string' && v.length > 0 && typeof text === 'string' && redact.containsKnownSecret(text)) {
         if (this.metrics) this.metrics.bump('secrets_blocked');
-        throw new GhostError(
+        throw new JerichoError(
           CODES.SECRET_VALUE_NEVER_RETURNED,
           `Se bloqueó una ${where} que contenía el valor del secreto '${name}'.`,
           { details: { secret: name } }

@@ -106,7 +106,7 @@ Most existing MCP servers are superficial command wrappers that execute arbitrar
 ## ⚡ Core Technical Pillars
 
 ### 1. 🧱 Military-Grade Filesystem Jail (`paths.js`)
-* **Strict Root Confinement:** The agent is bounded to authorized workspace roots (`GHOSTPC_ROOTS` or `CHATGPT_WORKSPACE`).
+* **Strict Root Confinement:** The agent is bounded to authorized workspace roots (`JERICHO_ROOTS` or `CHATGPT_WORKSPACE`).
 * **OS Exploit Immunity:** Proactively rejects *Path Traversal* (`../`), NTFS Alternate Data Streams (`file:stream`), MS-DOS reserved device names (`CON`, `PRN`, `AUX`, `NUL`), 8.3 short-name aliases (`PROGRA~1`), UNC network paths (`\\evil-server\`), and symlink/junction breakout attacks via canonical `realpath` verification.
 * **Non-Negotiable Secret Exclusions:** Hardcoded blocks for `.env*`, `.ssh/`, `.aws/`, `.gnupg/`, `id_rsa`, `.npmrc`, `.git-credentials`, and cryptographic certificates (`*.pem`, `*.key`) — even if located inside authorized workspaces.
 
@@ -132,7 +132,7 @@ Rather than bloating context windows with 40+ noisy tools, Jericho groups capabi
 
 | Profile | Tool Name | Risk Level | Capability & Description |
 | :--- | :--- | :---: | :--- |
-| **`core_read`** | `ghostpc.status` | R0 | Inspects server health, limits, active profiles, and metrics. |
+| **`core_read`** | `jericho.status` | R0 | Inspects server health, limits, active profiles, and metrics. |
 | **`core_read`** | `workspace.read` | R0 | Reads multiple files with budget constraints and SHA-256 hashes. |
 | **`core_read`** | `workspace.inspect`| R0 | Explores directory trees, file stats, permissions, and metadata. |
 | **`core_read`** | `workspace.search` | R0 | Fast grep and glob file searches restricted to authorized roots. |

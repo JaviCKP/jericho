@@ -27,7 +27,7 @@ const SUITES = [
 (async () => {
   const inicio = Date.now();
   console.log('================================================================');
-  console.log('               GhostPC v2 — SUITE COMPLETA');
+  console.log('               Jericho v2 — SUITE COMPLETA');
   console.log('================================================================');
 
   for (const [nombre, modulo] of SUITES) {
@@ -43,7 +43,7 @@ const SUITES = [
   }
 
   console.log(`\n\nDuración total: ${((Date.now() - inicio) / 1000).toFixed(1)}s`);
-  const s = h.summary('GhostPC v2 — RESULTADO GLOBAL');
+  const s = h.summary('Jericho v2 — RESULTADO GLOBAL');
 
   // Desglose por suite, útil para EVALS.md.
   const porSuite = new Map();

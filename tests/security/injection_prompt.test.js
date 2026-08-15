@@ -24,7 +24,7 @@ const PAYLOAD = [
 
 async function run() {
   const sb = makeSandbox({
-    env: { GHOSTPC_SESSION_AUTH_SECRET: 'prompt-test-session-secret' },
+    env: { JERICHO_SESSION_AUTH_SECRET: 'prompt-test-session-secret' },
     policy: { schema_version: 1, profiles: ['core_read', 'development', 'network'] },
   });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);

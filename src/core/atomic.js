@@ -15,7 +15,7 @@ const crypto = require('crypto');
  * y queda un `.tmp` huérfano que `sweepTemp()` limpia al arrancar.
  */
 
-const TMP_SUFFIX = '.ghostpc-tmp';
+const TMP_SUFFIX = '.jericho-tmp';
 
 function writeFileAtomic(target, data, encoding = 'utf-8') {
   const dir = path.dirname(target);

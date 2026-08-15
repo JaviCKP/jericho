@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 
 /** Small, fail-closed authority boundary. MCP arguments are never identity. */
 class SessionAuthority {
@@ -20,18 +20,18 @@ class SessionAuthority {
   }
 
   authenticate(token) {
-    if (!this.secret) throw new GhostError(CODES.POLICY_DENIED, 'Autoridad de sesión no configurada.');
-    if (typeof token !== 'string') throw new GhostError(CODES.POLICY_DENIED, 'Falta contexto de sesión autenticado.');
+    if (!this.secret) throw new JerichoError(CODES.POLICY_DENIED, 'Autoridad de sesión no configurada.');
+    if (typeof token !== 'string') throw new JerichoError(CODES.POLICY_DENIED, 'Falta contexto de sesión autenticado.');
     const [body, sig] = token.split('.');
     const expected = crypto.createHmac('sha256', this.secret).update(body || '').digest('base64url');
     if (!body || !sig || sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-      throw new GhostError(CODES.POLICY_DENIED, 'Contexto de sesión no autenticado.');
+      throw new JerichoError(CODES.POLICY_DENIED, 'Contexto de sesión no autenticado.');
     }
     let ctx;
-    try { ctx = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); } catch (e) { throw new GhostError(CODES.POLICY_DENIED, 'Contexto de sesión inválido.'); }
-    for (const key of ['session_id', 'user_id', 'project_id', 'policy_revision']) if (!ctx[key]) throw new GhostError(CODES.POLICY_DENIED, 'Contexto de sesión incompleto.');
-    if (ctx.policy_revision !== this.policyRevision) throw new GhostError(CODES.POLICY_DENIED, 'Revisión de política obsoleta.');
-    if (!ctx.expires_at || Date.parse(ctx.expires_at) <= Date.now()) throw new GhostError(CODES.POLICY_DENIED, 'Contexto de sesión caducado.');
+    try { ctx = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); } catch (e) { throw new JerichoError(CODES.POLICY_DENIED, 'Contexto de sesión inválido.'); }
+    for (const key of ['session_id', 'user_id', 'project_id', 'policy_revision']) if (!ctx[key]) throw new JerichoError(CODES.POLICY_DENIED, 'Contexto de sesión incompleto.');
+    if (ctx.policy_revision !== this.policyRevision) throw new JerichoError(CODES.POLICY_DENIED, 'Revisión de política obsoleta.');
+    if (!ctx.expires_at || Date.parse(ctx.expires_at) <= Date.now()) throw new JerichoError(CODES.POLICY_DENIED, 'Contexto de sesión caducado.');
     return Object.freeze(ctx);
   }
 }

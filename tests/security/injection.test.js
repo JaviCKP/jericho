@@ -7,11 +7,11 @@ const { makeSandbox } = require('../helpers/sandbox');
 const { Dispatcher } = require('../../src/tools/dispatch');
 const { IMPLEMENTATIONS } = require('../../src/tools');
 
-const MARKER = path.join(os.tmpdir(), `ghostpc-injection-marker-${process.pid}.txt`);
+const MARKER = path.join(os.tmpdir(), `jericho-injection-marker-${process.pid}.txt`);
 function clearMarker() { try { fs.unlinkSync(MARKER); } catch (_) {} }
 
 async function run() {
-  const sb = makeSandbox({ env: { GHOSTPC_SESSION_AUTH_SECRET: 'synthetic-test-secret' } });
+  const sb = makeSandbox({ env: { JERICHO_SESSION_AUTH_SECRET: 'synthetic-test-secret' } });
   const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
   const S = { session_id: 'ses_injection' };
   const rawCall = d.call.bind(d);

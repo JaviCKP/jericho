@@ -18,7 +18,7 @@ function renderWorkItemMarkdown(item) {
   );
 
   const lines = [];
-  lines.push(`<!-- VISTA GENERADA POR GhostPC. Fuente de verdad: ${item.id}.json`);
+  lines.push(`<!-- VISTA GENERADA POR Jericho. Fuente de verdad: ${item.id}.json`);
   lines.push('     Editar este .md NO cambia el estado: se regenera en la próxima escritura. -->');
   lines.push('');
   lines.push(`# ${item.title}`);

@@ -105,7 +105,7 @@ registrar(
     execFileSync('git', ['add', '-A'], { cwd: repo });
     execFileSync('git', ['commit', '-q', '-m', 'inicial'], { cwd: repo });
 
-    await rec.call('ghostpc.status', { ...S });
+    await rec.call('jericho.status', { ...S });
     await rec.call('memory.resume', { action: 'list_projects', ...S });
 
     const crear = await rec.call('memory.checkpoint', {
@@ -396,14 +396,14 @@ registrar(
 
 (async () => {
   console.log('================================================================');
-  console.log('        GhostPC v2 — EVALUACIONES END-TO-END');
+  console.log('        Jericho v2 — EVALUACIONES END-TO-END');
   console.log('================================================================');
   console.log('NOTA: el agente es GUIONIZADO, no un modelo. Estas métricas miden');
   console.log('      el comportamiento del SERVIDOR, no la habilidad del modelo.\n');
 
   const resultados = [];
   for (const esc of escenarios) {
-    const sb = makeSandbox({ env: { GHOSTPC_SESSION_AUTH_SECRET: `eval-session-secret-${esc.nombre}` } });
+    const sb = makeSandbox({ env: { JERICHO_SESSION_AUTH_SECRET: `eval-session-secret-${esc.nombre}` } });
     const d = new Dispatcher(sb.runtime, IMPLEMENTATIONS);
     const rec = new Recorder(d, sb.runtime);
     let salida;

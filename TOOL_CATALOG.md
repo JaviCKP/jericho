@@ -34,14 +34,14 @@ Los que pueden requerir permiso admiten además `approval_id` y `dry_run`.
 
 | Herramienta | v | Riesgo | Timeout | Idem. | Rollback |
 |---|---|---|---|---|---|
-| `ghostpc.status` | 2.0.0 | R0 | 5 s | sí | n/a |
+| `jericho.status` | 2.0.0 | R0 | 5 s | sí | n/a |
 | `workspace.inspect` | 2.0.0 | R0 | 20 s | sí | n/a |
 | `workspace.search` | 2.0.0 | R0 | 30 s | sí | n/a |
 | `workspace.read` | 2.0.0 | R0 | 15 s | sí | n/a |
 | `memory.resume` | 2.0.0 | R0 | 40 s | sí | n/a |
 | `git.inspect` | 2.0.0 | R0 | 30 s | sí | n/a |
 
-**`ghostpc.status`** — Devuelve los límites REALES: perfiles, riesgo máximo, raíces, destinos de
+**`jericho.status`** — Devuelve los límites REALES: perfiles, riesgo máximo, raíces, destinos de
 red, nombres de secretos, aprobaciones pendientes, métricas y actividad reciente.
 Sustituye a `get_agent_protocol`: en vez de pedirle al modelo que se porte bien, le dice qué
 puede hacer, porque el servidor lo aplica.
@@ -85,7 +85,7 @@ aplica limpio (`PATCH_DID_NOT_APPLY`) o se superan los límites (`LIMIT_EXCEEDED
 **`terminal.exec`** — `action`: `run` | `start_background` | `logs` | `list` | `stop`.
 **No es una shell.** `program` debe estar en la allowlist y `args` es una lista.
 `cwd` es obligatorio. El hijo NO hereda el entorno del servidor; los secretos entran sólo por
-`secret_names` y sus valores nunca vuelven. Sólo se pueden detener procesos creados por GhostPC
+`secret_names` y sus valores nunca vuelven. Sólo se pueden detener procesos creados por Jericho
 y de la misma sesión, con verificación anti-reutilización de PID.
 
 **`verify.run`** — `check`: `test` | `lint` | `build` | `typecheck` | `custom`.
@@ -111,7 +111,7 @@ El mensaje viaja como argv separado: no es inyectable. Sin operaciones contra re
 | `desktop.keyboard` | 2.0.0 | **R3** | 20 s | sí |
 
 Orden de preferencia: API directa > accesibilidad > selector > captura de región > coordenadas.
-GhostPC implementa los dos últimos con precondiciones estrictas.
+Jericho implementa los dos últimos con precondiciones estrictas.
 
 **`desktop.observe`** — `windows` (id, proceso, título, geometría, foco) | `capture_window` |
 `capture_region` | `capture_screen` | `metrics`. Cada captura devuelve `observation_id` con
@@ -152,14 +152,14 @@ No es una terminal de administrador.
 
 ## 7. Migración desde los 45 nombres de v1
 
-Si un cliente antiguo llama a un nombre v1, GhostPC devuelve un error explicativo con la
-equivalencia. Con `GHOSTPC_LEGACY_ALIASES=translate` la traducción es automática.
+Si un cliente antiguo llama a un nombre v1, Jericho devuelve un error explicativo con la
+equivalencia. Con `JERICHO_LEGACY_ALIASES=translate` la traducción es automática.
 
 ### Renombradas / combinadas
 
 | v1 | v2 | Nota |
 |---|---|---|
-| `get_agent_protocol` | `ghostpc.status` | Las reglas son política del servidor, no un prompt |
+| `get_agent_protocol` | `jericho.status` | Las reglas son política del servidor, no un prompt |
 | `list_pending_tasks` | `memory.resume(action="list_items")` | |
 | `resume_task_session` | `memory.resume(action="load")` | Ahora verifica la realidad |
 | `save_or_update_task` | `memory.checkpoint(action="update")` | Exige `expected_revision` |
@@ -172,8 +172,8 @@ equivalencia. Con `GHOSTPC_LEGACY_ALIASES=translate` la traducción es automáti
 | `get_background_task_output` | `terminal.exec(action="logs")` | |
 | `kill_background_task` | `terminal.exec(action="stop")` | |
 | `list_background_tasks` | `terminal.exec(action="list")` | |
-| `list_processes` | `terminal.exec(action="list")` | Sólo procesos de GhostPC |
-| `kill_process` | `terminal.exec(action="stop")` | Sólo procesos de GhostPC, con verificación de PID |
+| `list_processes` | `terminal.exec(action="list")` | Sólo procesos de Jericho |
+| `kill_process` | `terminal.exec(action="stop")` | Sólo procesos de Jericho, con verificación de PID |
 | `git_status` / `git_log` / `git_diff` | `git.inspect` | |
 | `git_commit` | `git.commit` | Exige `files`; no inyectable |
 | `save_context_checkpoint` | `memory.checkpoint` | |
@@ -207,7 +207,7 @@ equivalencia. Con `GHOSTPC_LEGACY_ALIASES=translate` la traducción es automáti
 
 | v1 | Motivo |
 |---|---|
-| `get_environment_vars` | Los valores de entorno nunca vuelven al modelo. `ghostpc.status` lista los NOMBRES de secretos disponibles |
+| `get_environment_vars` | Los valores de entorno nunca vuelven al modelo. `jericho.status` lista los NOMBRES de secretos disponibles |
 | `open_app_or_url` | Ruta de exfiltración (abrir `https://atacante/?d=…`) y de ejecución |
 | `check_port` | Primitiva de escaneo de red sin valor para desarrollo |
 | `mouse_move` | Mover el cursor sin actuar no aporta y rompía el determinismo |
@@ -217,7 +217,7 @@ equivalencia. Con `GHOSTPC_LEGACY_ALIASES=translate` la traducción es automáti
 
 | Herramienta | Para qué |
 |---|---|
-| `ghostpc.status` | Conocer los límites reales antes de planificar |
+| `jericho.status` | Conocer los límites reales antes de planificar |
 | `workspace.rollback` | Deshacer un parche por completo |
 | `verify.run` | Producir evidencia verificable con `trace_id` |
 | `memory.propose_rule` | Proponer reglas globales sin poder aceptarlas |
@@ -247,7 +247,7 @@ equivalencia. Con `GHOSTPC_LEGACY_ALIASES=translate` la traducción es automáti
 | `SCHEMA_INVALID` | sí | Los datos no cumplen el esquema |
 | `COMMAND_NOT_ALLOWED` | no | Programa, subcomando o argumento prohibido |
 | `TIMEOUT` | sí | Superó el tiempo máximo |
-| `PROCESS_NOT_OWNED` | no | El proceso no es de GhostPC o de esta sesión |
+| `PROCESS_NOT_OWNED` | no | El proceso no es de Jericho o de esta sesión |
 | `CIRCUIT_OPEN` | sí | Demasiados fallos seguidos; cambia una condición |
 | `NET_DESTINATION_DENIED` | no | Alias desconocido o esquema no permitido |
 | `NET_METHOD_DENIED` | no | Método no declarado para ese destino |

@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const { writeJsonAtomic, writeFileAtomic, readJsonSafe, sweepTemp, Lease } = require('../atomic');
 const { newWorkItemId } = require('../ids');
 const redact = require('../redact');
@@ -51,9 +51,9 @@ class MemoryStore {
 
   static _safeId(value, label) {
     if (typeof value !== 'string' || !/^[a-z0-9][a-z0-9._-]{0,127}$/i.test(value)) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, `${label} inválido: sólo [a-z0-9._-], máx. 128 caracteres.`);
+      throw new JerichoError(CODES.INVALID_ARGUMENT, `${label} inválido: sólo [a-z0-9._-], máx. 128 caracteres.`);
     }
-    if (value.includes('..')) throw new GhostError(CODES.INVALID_ARGUMENT, `${label} no puede contener '..'.`);
+    if (value.includes('..')) throw new JerichoError(CODES.INVALID_ARGUMENT, `${label} no puede contener '..'.`);
     return value;
   }
 
@@ -114,7 +114,7 @@ class MemoryStore {
   getProject(projectId) {
     const res = readJsonSafe(path.join(this._projectDir(projectId), 'project.json'), null);
     if (!res.ok) {
-      throw new GhostError(CODES.SCHEMA_INVALID, `project.json de '${projectId}' está corrupto: ${res.error}`);
+      throw new JerichoError(CODES.SCHEMA_INVALID, `project.json de '${projectId}' está corrupto: ${res.error}`);
     }
     return res.value;
   }
@@ -142,12 +142,12 @@ class MemoryStore {
     const file = this._itemFile(projectId, itemId);
     const res = readJsonSafe(file, null);
     if (res.missing || res.value === null) {
-      throw new GhostError(CODES.NOT_FOUND, `No existe el work item '${itemId}' en el proyecto '${projectId}'.`, {
+      throw new JerichoError(CODES.NOT_FOUND, `No existe el work item '${itemId}' en el proyecto '${projectId}'.`, {
         recoverable: true,
       });
     }
     if (!res.ok) {
-      throw new GhostError(CODES.SCHEMA_INVALID, `El work item '${itemId}' está corrupto: ${res.error}`, {
+      throw new JerichoError(CODES.SCHEMA_INVALID, `El work item '${itemId}' está corrupto: ${res.error}`, {
         remediation: 'Usa memory.restore para recuperar la última revisión válida del historial.',
       });
     }
@@ -163,7 +163,7 @@ class MemoryStore {
     const id = fields.id ? MemoryStore._safeId(fields.id, 'id') : newWorkItemId();
     const file = this._itemFile(projectId, id);
     if (fs.existsSync(file)) {
-      throw new GhostError(CODES.REVISION_CONFLICT, `El work item '${id}' ya existe. Usa memory.checkpoint con expected_revision.`, {
+      throw new JerichoError(CODES.REVISION_CONFLICT, `El work item '${id}' ya existe. Usa memory.checkpoint con expected_revision.`, {
         recoverable: true,
       });
     }
@@ -191,7 +191,7 @@ class MemoryStore {
     const lease = new Lease(lockDir, { ttlMs: 15_000, owner: sessionId || 'unknown' });
     const acquired = lease.tryAcquire();
     if (!acquired.acquired) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.LEASE_HELD,
         `Otra sesión (${acquired.heldBy}) está escribiendo en '${itemId}'. Reintenta en unos segundos.`,
         { recoverable: true, details: { held_by: acquired.heldBy, expires_at: acquired.expiresAt } }
@@ -201,14 +201,14 @@ class MemoryStore {
       const current = this.get(projectId, itemId);
 
       if (expectedRevision === undefined || expectedRevision === null) {
-        throw new GhostError(
+        throw new JerichoError(
           CODES.INVALID_ARGUMENT,
           'expected_revision es obligatorio: evita que dos chats se pisen sin darse cuenta.',
           { details: { current_revision: current.revision } }
         );
       }
       if (current.revision !== expectedRevision) {
-        throw new GhostError(
+        throw new JerichoError(
           CODES.REVISION_CONFLICT,
           `Conflicto de revisión: esperabas ${expectedRevision} pero la vigente es ${current.revision}. ` +
             'Otro chat o sesión modificó este work item.',
@@ -242,7 +242,7 @@ class MemoryStore {
         if (!this.policy || this.policy.memory.require_evidence_for_completion !== false) {
           const check = schema.checkCompletionEvidence(next, traceExists);
           if (!check.ok) {
-            throw new GhostError(
+            throw new JerichoError(
               CODES.EVIDENCE_MISSING,
               'No se puede marcar COMPLETED: faltan evidencias para criterios de aceptación obligatorios.',
               {
@@ -340,7 +340,7 @@ class MemoryStore {
     const file = path.join(hdir, `rev-${String(revision).padStart(6, '0')}.json`);
     const res = readJsonSafe(file, null);
     if (!res.ok || !res.value) {
-      throw new GhostError(CODES.NOT_FOUND, `No existe la revisión ${revision} de '${itemId}'.`);
+      throw new JerichoError(CODES.NOT_FOUND, `No existe la revisión ${revision} de '${itemId}'.`);
     }
     let current = null;
     try {
@@ -413,7 +413,7 @@ class MemoryStore {
     if (res.missing || !res.value) {
       return { schema_version: schema.SCHEMA_VERSION, rules: [], updated_at: null };
     }
-    if (!res.ok) throw new GhostError(CODES.SCHEMA_INVALID, `rules.json corrupto: ${res.error}`);
+    if (!res.ok) throw new JerichoError(CODES.SCHEMA_INVALID, `rules.json corrupto: ${res.error}`);
     return res.value;
   }
 
@@ -423,7 +423,7 @@ class MemoryStore {
    */
   proposeGlobalRule({ text, rationale, sessionId, traceId }) {
     if (typeof text !== 'string' || text.trim().length < 5) {
-      throw new GhostError(CODES.INVALID_ARGUMENT, 'El texto de la regla es obligatorio.');
+      throw new JerichoError(CODES.INVALID_ARGUMENT, 'El texto de la regla es obligatorio.');
     }
     const id = `prop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const proposal = {
@@ -455,7 +455,7 @@ class MemoryStore {
   decideRuleProposal(proposalId, accept, by) {
     const file = path.join(this.proposalsDir, `${MemoryStore._safeId(proposalId, 'proposal_id')}.json`);
     const res = readJsonSafe(file, null);
-    if (!res.ok || !res.value) throw new GhostError(CODES.NOT_FOUND, `Propuesta '${proposalId}' desconocida.`);
+    if (!res.ok || !res.value) throw new JerichoError(CODES.NOT_FOUND, `Propuesta '${proposalId}' desconocida.`);
     const proposal = res.value;
     proposal.status = accept ? 'ACCEPTED' : 'REJECTED';
     proposal.decided_at = new Date().toISOString();

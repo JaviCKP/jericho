@@ -1,7 +1,7 @@
 'use strict';
 
 const TurndownService = require('turndown');
-const { GhostError, CODES } = require('../../core/errors');
+const { JerichoError, CODES } = require('../../core/errors');
 
 /**
  * Herramientas de red.
@@ -108,12 +108,12 @@ function prepareCall(args, ctx) {
   const { url, dest } = ctx.runtime.net.resolveAliasUrl(args.destination, args.path || '/', method);
 
   if (args.body && ['GET', 'HEAD'].includes(method)) {
-    throw new GhostError(CODES.INVALID_ARGUMENT, `${method} no admite cuerpo.`);
+    throw new JerichoError(CODES.INVALID_ARGUMENT, `${method} no admite cuerpo.`);
   }
 
   const heuristic = looksLikeLocalData(args.body, ctx);
   if (heuristic.detected && args.contains_local_data !== true) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.POLICY_DENIED,
       'El cuerpo parece contener datos leídos de este equipo pero se declaró contains_local_data=false.',
       {

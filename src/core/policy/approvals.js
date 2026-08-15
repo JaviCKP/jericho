@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { newApprovalId, fingerprint } = require('../ids');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 const redact = require('../redact');
 const crypto = require('crypto');
 
@@ -34,12 +34,12 @@ class ApprovalStore {
     fs.mkdirSync(this.decidedDir, { recursive: true });
     this.ttlMs = ttlMs;
     this.journal = journal;
-    this.operatorSecret = operatorSecret || process.env.GHOSTPC_OPERATOR_SECRET || null;
+    this.operatorSecret = operatorSecret || process.env.JERICHO_OPERATOR_SECRET || null;
   }
 
   _file(dir, id) {
     if (!/^apr_[A-Za-z0-9_]+$/.test(id)) {
-      throw new GhostError(CODES.APPROVAL_INVALID, 'Identificador de aprobación con formato inválido.');
+      throw new JerichoError(CODES.APPROVAL_INVALID, 'Identificador de aprobación con formato inválido.');
     }
     return path.join(dir, `${id}.json`);
   }
@@ -94,24 +94,24 @@ class ApprovalStore {
   /** Decisión humana. `by` identifica quién decidió (usuario del SO). */
   decide(id, approved, by, operatorContext = null) {
     if (!operatorContext || operatorContext.channel !== 'operator' || operatorContext.authenticated !== true || !Array.isArray(operatorContext.acl) || !operatorContext.acl.includes('approval:decide') || !operatorContext.nonce || !this.operatorSecret) {
-      throw new GhostError(CODES.POLICY_DENIED, 'La aprobación requiere el canal de operador autenticado y ACL válida.');
+      throw new JerichoError(CODES.POLICY_DENIED, 'La aprobación requiere el canal de operador autenticado y ACL válida.');
     }
     const file = this._file(this.pendingDir, id);
     if (!fs.existsSync(file)) {
-      throw new GhostError(CODES.APPROVAL_INVALID, `No hay ninguna solicitud pendiente con id '${id}'.`);
+      throw new JerichoError(CODES.APPROVAL_INVALID, `No hay ninguna solicitud pendiente con id '${id}'.`);
     }
     const record = JSON.parse(fs.readFileSync(file, 'utf-8'));
     if (operatorContext.nonce !== record.nonce) {
-      throw new GhostError(CODES.POLICY_DENIED, 'Nonce de operador no coincide con la solicitud.');
+      throw new JerichoError(CODES.POLICY_DENIED, 'Nonce de operador no coincide con la solicitud.');
     }
     const signed = crypto.createHmac('sha256', this.operatorSecret).update(`${id}:${record.nonce}:${approved ? 'approve' : 'deny'}`).digest('hex');
-    if (operatorContext.signature !== signed) throw new GhostError(CODES.POLICY_DENIED, 'Autenticación de operador inválida.');
+    if (operatorContext.signature !== signed) throw new JerichoError(CODES.POLICY_DENIED, 'Autenticación de operador inválida.');
     record.status = approved ? 'APPROVED' : 'DENIED';
     record.decided_at = new Date().toISOString();
     record.decided_by = by || 'unknown';
     const decidedFile = this._file(this.decidedDir, id);
     try { fs.renameSync(file, decidedFile); } catch (e) {
-      throw new GhostError(CODES.APPROVAL_INVALID, 'La aprobación ya fue consumida o no está disponible.');
+      throw new JerichoError(CODES.APPROVAL_INVALID, 'La aprobación ya fue consumida o no está disponible.');
     }
     fs.writeFileSync(decidedFile, JSON.stringify(record, null, 2), 'utf-8');
     if (this.journal) {
@@ -135,32 +135,32 @@ class ApprovalStore {
     if (!fs.existsSync(file)) {
       // ¿Sigue pendiente?
       if (fs.existsSync(this._file(this.pendingDir, id))) {
-        throw new GhostError(CODES.APPROVAL_REQUIRED, `La aprobación '${id}' sigue pendiente de decisión humana.`, {
+        throw new JerichoError(CODES.APPROVAL_REQUIRED, `La aprobación '${id}' sigue pendiente de decisión humana.`, {
           recoverable: true,
           remediation: `Pide a la persona que ejecute: npm run approve -- ${id}`,
         });
       }
-      throw new GhostError(CODES.APPROVAL_INVALID, `Aprobación '${id}' desconocida.`);
+      throw new JerichoError(CODES.APPROVAL_INVALID, `Aprobación '${id}' desconocida.`);
     }
     const record = JSON.parse(fs.readFileSync(file, 'utf-8'));
     if (record.status !== 'APPROVED') {
-      throw new GhostError(CODES.APPROVAL_INVALID, `La aprobación '${id}' fue denegada por la persona.`);
+      throw new JerichoError(CODES.APPROVAL_INVALID, `La aprobación '${id}' fue denegada por la persona.`);
     }
     for (const key of ['session_id', 'user_id', 'project_id']) {
-      if ((record[key] || null) !== (context[key] || null)) throw new GhostError(CODES.APPROVAL_INVALID, 'La aprobación no pertenece a esta sesión, usuario o proyecto.');
+      if ((record[key] || null) !== (context[key] || null)) throw new JerichoError(CODES.APPROVAL_INVALID, 'La aprobación no pertenece a esta sesión, usuario o proyecto.');
     }
     if (record.consumed_at) {
-      throw new GhostError(CODES.APPROVAL_INVALID, `La aprobación '${id}' ya se usó el ${record.consumed_at}. Las aprobaciones son de un solo uso.`);
+      throw new JerichoError(CODES.APPROVAL_INVALID, `La aprobación '${id}' ya se usó el ${record.consumed_at}. Las aprobaciones son de un solo uso.`);
     }
     if (Date.parse(record.expires_at) < Date.now()) {
-      throw new GhostError(CODES.APPROVAL_INVALID, `La aprobación '${id}' caducó el ${record.expires_at}.`, {
+      throw new JerichoError(CODES.APPROVAL_INVALID, `La aprobación '${id}' caducó el ${record.expires_at}.`, {
         recoverable: true,
         remediation: 'Vuelve a solicitar la operación para generar una nueva aprobación.',
       });
     }
     const fp = fingerprint(tool, args);
     if (fp !== record.fingerprint) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.APPROVAL_INVALID,
         'La aprobación no corresponde a esta operación exacta (la huella de los argumentos no coincide).',
         { details: { approved_tool: record.tool, attempted_tool: tool } }
@@ -168,7 +168,7 @@ class ApprovalStore {
     }
     record.consumed_at = new Date().toISOString();
     const consumed = `${file}.consumed`;
-    try { fs.renameSync(file, consumed); } catch (e) { throw new GhostError(CODES.APPROVAL_INVALID, 'La aprobación ya fue consumida de forma concurrente.'); }
+    try { fs.renameSync(file, consumed); } catch (e) { throw new JerichoError(CODES.APPROVAL_INVALID, 'La aprobación ya fue consumida de forma concurrente.'); }
     fs.writeFileSync(consumed, JSON.stringify(record, null, 2), 'utf-8');
     if (this.journal) {
       this.journal.append({ kind: 'approval.consumed', approval_id: id, tool });

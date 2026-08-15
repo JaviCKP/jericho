@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Política POR DEFECTO de GhostPC.
+ * Política POR DEFECTO de Jericho.
  *
  * Esto es la parte INMUTABLE: se compila con el servidor y no la puede cambiar
  * ningún contenido obtenido con herramientas. El archivo de política en disco

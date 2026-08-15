@@ -5,11 +5,11 @@ const os = require('os');
 const path = require('path');
 
 /**
- * Crea un runtime de GhostPC completamente aislado en un directorio temporal.
+ * Crea un runtime de Jericho completamente aislado en un directorio temporal.
  * Cada prueba obtiene su propio workspace, política, diario y memoria.
  */
 function makeSandbox(overrides = {}) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ghostpc-test-'));
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'jericho-test-'));
   const ws = path.join(base, 'workspace');
   const control = path.join(base, 'control');
   const memory = path.join(base, 'memory');

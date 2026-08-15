@@ -2,7 +2,7 @@
 
 const { execFile } = require('child_process');
 const crypto = require('crypto');
-const { GhostError, CODES } = require('../errors');
+const { JerichoError, CODES } = require('../errors');
 
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
@@ -85,7 +85,7 @@ function runPowerShell(script, args = [], timeout = 15000) {
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script, ...args],
       { timeout, maxBuffer: 8 * 1024 * 1024, windowsHide: true },
       (err, stdout, stderr) => {
-        if (err && !stdout) return reject(new GhostError(CODES.INTERNAL, `PowerShell falló: ${stderr || err.message}`));
+        if (err && !stdout) return reject(new JerichoError(CODES.INTERNAL, `PowerShell falló: ${stderr || err.message}`));
         resolve(stdout.toString());
       }
     );
@@ -95,7 +95,7 @@ function runPowerShell(script, args = [], timeout = 15000) {
 function runCmd(file, argv, timeout = 15000) {
   return new Promise((resolve, reject) => {
     execFile(file, argv, { timeout, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
-      if (err && !stdout) return reject(new GhostError(CODES.INTERNAL, `${file} falló: ${stderr || err.message}`));
+      if (err && !stdout) return reject(new JerichoError(CODES.INTERNAL, `${file} falló: ${stderr || err.message}`));
       resolve(stdout.toString());
     });
   });
@@ -108,7 +108,7 @@ async function listWindows() {
     try {
       parsed = JSON.parse(raw || '[]');
     } catch (e) {
-      throw new GhostError(CODES.INTERNAL, 'No se pudo interpretar la lista de ventanas.');
+      throw new JerichoError(CODES.INTERNAL, 'No se pudo interpretar la lista de ventanas.');
     }
     const list = Array.isArray(parsed) ? parsed : [parsed];
     const filtered = list
@@ -187,7 +187,7 @@ async function focusWindow(windowId) {
 /** Enfoca por handle usando un script parametrizado (el valor es numérico validado). */
 async function focusWindowById(windowId) {
   const id = Number(windowId);
-  if (!Number.isFinite(id)) throw new GhostError(CODES.INVALID_ARGUMENT, 'window_id inválido.');
+  if (!Number.isFinite(id)) throw new JerichoError(CODES.INVALID_ARGUMENT, 'window_id inválido.');
   if (isWindows) {
     // El handle se inyecta como literal numérico validado, no como texto libre.
     const script = PS_FOCUS_WINDOW.replace('param([long]$Handle)', `$Handle = [long]${Math.trunc(id)}`);
@@ -244,7 +244,7 @@ $bmp.Dispose()
 `;
   const out = await runPowerShell(script, [], 30000);
   const b64 = out.replace(/\s+/g, '');
-  if (!b64) throw new GhostError(CODES.INTERNAL, 'La captura de pantalla devolvió vacío.');
+  if (!b64) throw new JerichoError(CODES.INTERNAL, 'La captura de pantalla devolvió vacío.');
   return Buffer.from(b64, 'base64');
 }
 
@@ -272,7 +272,7 @@ async function captureRegion(region, { Jimp, screenshotFn }) {
     return { buffer: await captureRegionWindows(region), alreadyCropped: true };
   }
   if (!screenshotFn) {
-    throw new GhostError(CODES.INTERNAL, 'No hay backend de captura disponible en esta plataforma.');
+    throw new JerichoError(CODES.INTERNAL, 'No hay backend de captura disponible en esta plataforma.');
   }
   const raw = await screenshotFn({ format: 'png' });
   return { buffer: raw, alreadyCropped: false };
@@ -312,7 +312,7 @@ class ObservationStore {
    */
   requireFresh(observationId) {
     if (!observationId) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.OBSERVATION_STALE,
         'Esta acción exige un observation_id reciente.',
         {
@@ -323,21 +323,21 @@ class ObservationStore {
     }
     const obs = this.observations.get(observationId);
     if (!obs) {
-      throw new GhostError(CODES.OBSERVATION_STALE, `observation_id '${observationId}' desconocido o ya descartado.`, {
+      throw new JerichoError(CODES.OBSERVATION_STALE, `observation_id '${observationId}' desconocido o ya descartado.`, {
         recoverable: true,
         remediation: 'Vuelve a observar con desktop.observe.',
       });
     }
     const age = Date.now() - obs.at;
     if (age > this.maxAgeMs) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.OBSERVATION_STALE,
         `La observación tiene ${Math.round(age / 1000)}s; el máximo es ${Math.round(this.maxAgeMs / 1000)}s. La pantalla puede haber cambiado.`,
         { recoverable: true, remediation: 'Vuelve a observar con desktop.observe antes de actuar.' }
       );
     }
     if (obs.actions_since >= this.maxActions) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.ACTION_BUDGET_EXHAUSTED,
         `Ya se realizaron ${obs.actions_since} acciones con esta observación (máx. ${this.maxActions}).`,
         { recoverable: true, remediation: 'Vuelve a observar para confirmar el estado real antes de seguir actuando.' }
@@ -360,21 +360,21 @@ async function assertWindowPrecondition({ windowId, expectTitleContains, expectP
   const windows = await listWindows();
   const win = windows.find((w) => w.window_id === Number(windowId));
   if (!win) {
-    throw new GhostError(CODES.PRECONDITION_WINDOW, `La ventana ${windowId} ya no existe.`, {
+    throw new JerichoError(CODES.PRECONDITION_WINDOW, `La ventana ${windowId} ya no existe.`, {
       recoverable: true,
       details: { available: windows.slice(0, 15).map((w) => ({ window_id: w.window_id, process: w.process, title: w.title.slice(0, 80) })) },
       remediation: 'Vuelve a listar ventanas con desktop.observe(action="windows").',
     });
   }
   if (expectProcess && win.process.toLowerCase() !== String(expectProcess).toLowerCase()) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.PRECONDITION_WINDOW,
       `La ventana ${windowId} pertenece ahora a '${win.process}', no a '${expectProcess}'.`,
       { recoverable: true, details: { actual_process: win.process } }
     );
   }
   if (expectTitleContains && !win.title.toLowerCase().includes(String(expectTitleContains).toLowerCase())) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.PRECONDITION_WINDOW,
       `El título de la ventana ${windowId} es "${win.title}" y no contiene "${expectTitleContains}".`,
       { recoverable: true, details: { actual_title: win.title } }
@@ -388,7 +388,7 @@ async function assertWindowPrecondition({ windowId, expectTitleContains, expectP
       Math.abs(b.width - expectedBounds.width) > 2 ||
       Math.abs(b.height - expectedBounds.height) > 2;
     if (moved) {
-      throw new GhostError(
+      throw new JerichoError(
         CODES.PRECONDITION_WINDOW,
         `La ventana ${windowId} se movió o cambió de tamaño desde la observación. No se actúa a ciegas.`,
         { recoverable: true, details: { observed: expectedBounds, current: b }, remediation: 'Vuelve a observar y recalcula las coordenadas.' }
@@ -396,7 +396,7 @@ async function assertWindowPrecondition({ windowId, expectTitleContains, expectP
     }
   }
   if (requireFocus && !win.focused) {
-    throw new GhostError(
+    throw new JerichoError(
       CODES.PRECONDITION_WINDOW,
       `La ventana ${windowId} ("${win.title}") no tiene el foco. Escribir ahora enviaría el texto a otra aplicación.`,
       { recoverable: true, remediation: 'Usa desktop.element_action(action="focus") y vuelve a observar.' }

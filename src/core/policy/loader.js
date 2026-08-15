@@ -124,18 +124,18 @@ function validate(policy) {
 }
 
 function applyEnvOverrides(policy, env) {
-  if (env.GHOSTPC_PROFILES) {
-    policy.profiles = env.GHOSTPC_PROFILES.split(',').map((s) => s.trim()).filter(Boolean);
+  if (env.JERICHO_PROFILES) {
+    policy.profiles = env.JERICHO_PROFILES.split(',').map((s) => s.trim()).filter(Boolean);
   }
-  if (env.GHOSTPC_MAX_RISK) policy.max_risk = env.GHOSTPC_MAX_RISK.trim().toUpperCase();
-  if (env.GHOSTPC_APPROVAL_AT) policy.approval.required_at_or_above = env.GHOSTPC_APPROVAL_AT.trim().toUpperCase();
-  if (env.GHOSTPC_SECRETS) {
-    policy.secrets.allowed = env.GHOSTPC_SECRETS.split(',').map((s) => s.trim()).filter(Boolean);
+  if (env.JERICHO_MAX_RISK) policy.max_risk = env.JERICHO_MAX_RISK.trim().toUpperCase();
+  if (env.JERICHO_APPROVAL_AT) policy.approval.required_at_or_above = env.JERICHO_APPROVAL_AT.trim().toUpperCase();
+  if (env.JERICHO_SECRETS) {
+    policy.secrets.allowed = env.JERICHO_SECRETS.split(',').map((s) => s.trim()).filter(Boolean);
   }
-  if (env.GHOSTPC_NET_DESTINATIONS) {
+  if (env.JERICHO_NET_DESTINATIONS) {
     // formato: alias=https://host[|GET,POST];alias2=...
     const extra = [];
-    for (const chunk of env.GHOSTPC_NET_DESTINATIONS.split(';')) {
+    for (const chunk of env.JERICHO_NET_DESTINATIONS.split(';')) {
       const trimmed = chunk.trim();
       if (!trimmed) continue;
       const eq = trimmed.indexOf('=');
@@ -169,7 +169,7 @@ function loadPolicy({ policyFile, env = process.env } = {}) {
     } catch (e) {
       throw new Error(
         `La política en ${policyFile} no es JSON válido: ${e.message}. ` +
-        'GhostPC falla cerrado y no arranca con una política ilegible.'
+        'Jericho falla cerrado y no arranca con una política ilegible.'
       );
     }
     policy = deepMerge(policy, onDisk);
@@ -182,7 +182,7 @@ function loadPolicy({ policyFile, env = process.env } = {}) {
   if (errors.length) {
     throw new Error(
       `Política inválida (${source}):\n  - ${errors.join('\n  - ')}\n` +
-      'GhostPC falla cerrado y no arranca con una política inválida.'
+      'Jericho falla cerrado y no arranca con una política inválida.'
     );
   }
 
@@ -195,7 +195,7 @@ function writeTemplate(targetFile) {
   fs.mkdirSync(path.dirname(targetFile), { recursive: true });
   const template = {
     _README: [
-      'Política de GhostPC. Sólo la edita una persona.',
+      'Política de Jericho. Sólo la edita una persona.',
       'Ninguna herramienta MCP puede leer ni escribir este archivo (está en el directorio de control).',
       'Los valores omitidos heredan de src/core/policy/defaults.js.',
       'Los límites que superen HARD_CEILINGS se recortan automáticamente con aviso.',
