@@ -139,6 +139,9 @@ Jericho groups capabilities into clean, orthogonal tools across distinct securit
 | **`desktop`**    | `desktop.observe` | R2 | Lists windows and captures specific regions with geometry. |
 | **`desktop`**    | `desktop.element_action` | R2 | Clicks, drags, and scrolls relative to verified window bounds. |
 | **`desktop`**    | `desktop.keyboard` | R3 | Types text or presses hotkeys with secret leak prevention. |
+| **`network`**    | `web.fetch_readonly` | R2 | Reads public web pages into clean Markdown with SSRF protection. |
+| **`network`**    | `http.call_allowlisted` | R2/R3 | Sends HTTP requests to allowlisted API endpoints by alias. |
+| **`admin`**      | `admin.perform_allowlisted_action` | R4 | Executes predefined operator actions with strict approval gates. |
 
 ---
 
