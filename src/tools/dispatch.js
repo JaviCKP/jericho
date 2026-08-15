@@ -56,35 +56,6 @@ class Dispatcher {
     if (!def) {
       const legacy = this._resolveLegacy(name);
       if (legacy) {
-<<<<<<< HEAD
-        if (legacy.target && legacy.enabled) {
-          // Traducción inteligente para write_file / create_file
-          if (name === 'write_file' || name === 'create_file') {
-            const filePath = (rawArgs && (rawArgs.path || rawArgs.file_path || rawArgs.filename)) || '';
-            const content = (rawArgs && rawArgs.content !== undefined) ? String(rawArgs.content) : '';
-            if (filePath) {
-              const lines = content.split(/\r?\n/);
-              const patch = [
-                `--- /dev/null`,
-                `+++ b/${filePath.replace(/\\/g, '/')}`,
-                `@@ -0,0 +1,${lines.length} @@`,
-                ...lines.map((l) => `+${l}`),
-                '',
-              ].join('\n');
-              this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'workspace.apply_patch', trace_id: traceId });
-              return this.call('workspace.apply_patch', { patch, dry_run: false });
-            }
-          }
-          // Traducción inteligente para read_file
-          if (name === 'read_file') {
-            const filePath = (rawArgs && (rawArgs.path || rawArgs.file_path)) || '';
-            if (filePath) {
-              this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'workspace.read', trace_id: traceId });
-              return this.call('workspace.read', { paths: [filePath] });
-            }
-          }
-          // Traducción inteligente para run_command / run_powershell
-          if (name === 'run_command' || name === 'run_powershell' || name === 'execute_command') {
         // Traducción inteligente automática para herramientas legacy de GPTs personalizados
         if (name === 'write_file' || name === 'create_file') {
           const filePath = (rawArgs && (rawArgs.path || rawArgs.file_path || rawArgs.filename)) || '';
