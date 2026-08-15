@@ -3,7 +3,7 @@ const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio
 const path = require('path');
 
 async function testServer() {
-  console.log('--- Iniciando prueba completa de OpenPC-MCP ---');
+  console.log('--- Iniciando prueba completa de OpenPC-MCP Agentic Engine ---');
 
   const serverPath = path.resolve(__dirname, '../src/index.js');
   const transport = new StdioClientTransport({
@@ -13,8 +13,8 @@ async function testServer() {
 
   const client = new Client(
     {
-      name: 'test-client',
-      version: '1.2.0',
+      name: 'agent-tester',
+      version: '1.3.0',
     },
     {
       capabilities: {},
@@ -22,68 +22,54 @@ async function testServer() {
   );
 
   await client.connect(transport);
-  console.log('✅ Cliente conectado al servidor MCP con éxito.');
+  console.log('✅ Conexión con OpenPC-MCP establecida con éxito.');
 
-  const toolsResponse = await client.listTools();
-  console.log(`✅ ${toolsResponse.tools.length} herramientas registradas en total.`);
-
-  console.log('\n--- 1. Probando TASK ENGINE: Crear tarea Markdown ---');
-  const createRes = await client.callTool({
-    name: 'task_session',
+  console.log('\n--- 1. Guardando tarea rica con archivos relevantes vinculados ---');
+  const saveRes = await client.callTool({
+    name: 'save_or_update_task',
     arguments: {
-      action: 'create',
-      taskId: 'autenticacion-jwt',
-      title: 'Sistema de Autenticación JWT y Refresh Tokens',
-      project: 'mi-app-web',
-      objective: 'Implementar registro, login y middleware JWT seguro con base de datos SQLite.',
+      taskId: 'sistema-autenticacion',
+      title: 'Desarrollo de Autenticación con JWT y SQLite',
+      project: path.resolve(__dirname, '..'),
+      objective: 'Implementar endpoints de registro y login con hashing bcrypt y validación de tokens.',
+      relevantFiles: [
+        'package.json',
+        'src/config.js',
+      ],
       checklist: [
-        '[x] Diseñar tabla de usuarios en SQLite',
-        '[ ] Endpoint /api/auth/register',
-        '[ ] Endpoint /api/auth/login',
+        '[x] Configurar dependencias de seguridad',
+        '[/] Crear middleware de validación JWT',
+        '[ ] Escribir tests unitarios',
       ],
-      notes: 'Usando bcryptjs para hashing de passwords. Tokens expiran en 15m.',
+      activeNotes: 'Decisión arquitectónica: Usar tokens HMAC-SHA256 con expiración de 15 minutos.',
       nextSteps: [
-        'Crear controlador de login',
-        'Configurar cookies httpOnly para refresh token',
+        'Implementar función verifyToken() en el middleware',
+        'Probar endpoint de login con curl',
       ],
+      status: 'IN_PROGRESS',
     },
   });
-  console.log('Resultado create:\n', createRes.content[0].text);
+  console.log('Resultado save_or_update_task:\n', saveRes.content[0].text);
 
-  console.log('\n--- 2. Probando TASK ENGINE: Cargar tarea Markdown ---');
-  const loadRes = await client.callTool({
-    name: 'task_session',
-    arguments: {
-      action: 'load',
-      query: 'autenticacion',
-    },
-  });
-  console.log('Resultado load:\n', loadRes.content[0].text);
-
-  console.log('\n--- 3. Probando TASK ENGINE: Listar tareas ---');
+  console.log('\n--- 2. Listando tareas pendientes en el sistema ---');
   const listRes = await client.callTool({
-    name: 'task_session',
-    arguments: { action: 'list' },
+    name: 'list_pending_tasks',
+    arguments: {},
   });
-  console.log('Resultado list:\n', listRes.content[0].text);
+  console.log('Resultado list_pending_tasks:\n', listRes.content[0].text);
 
-  console.log('\n--- 4. Probando MEMORY BANK ---');
-  await client.callTool({
-    name: 'memory_bank',
+  console.log('\n--- 3. Reanudando sesión de tarea con precarga de archivos y Git ---');
+  const resumeRes = await client.callTool({
+    name: 'resume_task_session',
     arguments: {
-      action: 'append',
-      section: 'Reglas de Código',
-      content: 'Usar siempre TypeScript estricto y TailwindCSS para estilos.',
+      taskIdOrQuery: 'autenticacion',
+      includeFilePreviews: true,
     },
   });
-  const memRes = await client.callTool({
-    name: 'memory_bank',
-    arguments: { action: 'read' },
-  });
-  console.log('Resultado Memory Bank:\n', memRes.content[0].text);
+  console.log('Resultado resume_task_session:\n', resumeRes.content[0].text);
 
   await client.close();
-  console.log('\n🎉 ¡TODAS LAS PRUEBAS DEL MOTOR DE TAREAS Y MCP PASARON EXITOSAMENTE!');
+  console.log('\n🎉 ¡PRUEBA AGÉNTICA COMPLETADA CON ÉXITO!');
   process.exit(0);
 }
 
