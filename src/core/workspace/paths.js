@@ -355,7 +355,12 @@ function defaultRootDefinitions(env = process.env) {
       });
   }
   const ws = env.CHATGPT_WORKSPACE || path.join(home, 'ChatGPT-Workspace');
-  return [{ name: 'workspace', path: ws, write: true }];
+  const desktop = path.join(home, 'Desktop');
+  const roots = [{ name: 'workspace', path: ws, write: true }];
+  if (fs.existsSync(desktop)) {
+    roots.push({ name: 'desktop', path: desktop, write: true });
+  }
+  return roots;
 }
 
 module.exports = {

@@ -99,6 +99,7 @@ const DEFAULT_POLICY = {
       'go', 'cargo', 'rustc',
       'dotnet', 'java', 'mvn', 'gradle',
       'make',
+      'notepad', 'explorer', 'code',
     ],
     /** Subcomandos prohibidos por programa (aunque el programa esté permitido). */
     denied_subcommands: {
