@@ -1,0 +1,135 @@
+<svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="jericho-svg-title jericho-svg-desc" style="background:#F4F2EC; border-radius:12px; font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <title id="jericho-svg-title">Jericho Core Runtime Architecture</title>
+  <desc id="jericho-svg-desc">Zero-Trust architecture diagram for Jericho MCP Runtime connecting ChatGPT Web to local machine.</desc>
+  
+  <defs>
+    <style>
+      .font-sans { font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      .font-mono { font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; }
+      .text-charcoal { fill: #111315; }
+      .text-muted { fill: #55595E; }
+      .text-mint { fill: #1E5E43; }
+      .text-sand { fill: #4A3A25; }
+    </style>
+    <pattern id="grid-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.85" fill="#111315" opacity="0.08"/>
+    </pattern>
+    <marker id="arr-charcoal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#111315"/>
+    </marker>
+    <marker id="arr-mint" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3D8F6C"/>
+    </marker>
+    <marker id="arr-sand" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#B09670"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#F4F2EC" rx="12"/>
+  <rect width="100%" height="100%" fill="url(#grid-dots)" rx="12"/>
+
+  <!-- ZONE: JERICHO CORE RUNTIME (Boundary Box) -->
+  <rect x="100" y="276" width="800" height="348" rx="8"
+        fill="rgba(127,200,169,0.04)" stroke="rgba(17,19,21,0.22)" stroke-width="1.2" stroke-dasharray="6,4"/>
+  
+  <rect x="120" y="268" width="188" height="16" rx="3" fill="#F4F2EC" stroke="rgba(17,19,21,0.15)" stroke-width="0.8"/>
+  <text x="214" y="280" class="font-mono text-charcoal" font-size="8.5" font-weight="700" text-anchor="middle" letter-spacing="0.1em">JERICHO CORE RUNTIME</text>
+
+  <rect x="732" y="268" width="148" height="16" rx="3" fill="#F4F2EC" stroke="rgba(127,200,169,0.5)" stroke-width="0.8"/>
+  <text x="806" y="280" class="font-mono" fill="#246146" font-size="8" font-weight="700" text-anchor="middle" letter-spacing="0.08em">ZERO-TRUST BOUNDARY</text>
+
+  <!-- ==================== CONNECTORS & FLOWS ==================== -->
+
+  <!-- Client -> Gateway -->
+  <line x1="500" y1="124" x2="500" y2="172" stroke="#111315" stroke-width="1.5" marker-end="url(#arr-charcoal)"/>
+
+  <!-- Gateway -> Chokepoint Policy Engine -->
+  <line x1="500" y1="232" x2="500" y2="320" stroke="#3D8F6C" stroke-width="1.8" marker-end="url(#arr-mint)"/>
+
+  <!-- Policy Engine -> 3 Subsystems -->
+  <line x1="248" y1="380" x2="248" y2="424" stroke="#111315" stroke-width="1.2" marker-end="url(#arr-charcoal)"/>
+  <line x1="500" y1="380" x2="500" y2="424" stroke="#111315" stroke-width="1.2" marker-end="url(#arr-charcoal)"/>
+  <line x1="752" y1="380" x2="752" y2="424" stroke="#111315" stroke-width="1.2" marker-end="url(#arr-charcoal)"/>
+
+  <!-- 3 Subsystems -> Immutable Cryptographic Journal -->
+  <line x1="248" y1="488" x2="248" y2="532" stroke="#B09670" stroke-width="1.2" marker-end="url(#arr-sand)"/>
+  <line x1="500" y1="488" x2="500" y2="532" stroke="#B09670" stroke-width="1.2" marker-end="url(#arr-sand)"/>
+  <line x1="752" y1="488" x2="752" y2="532" stroke="#B09670" stroke-width="1.2" marker-end="url(#arr-sand)"/>
+
+  <!-- Journal -> Host Machine -->
+  <line x1="500" y1="588" x2="500" y2="668" stroke="#111315" stroke-width="1.5" marker-end="url(#arr-charcoal)"/>
+
+  <!-- ==================== ARROW LABELS & MASKS ==================== -->
+
+  <!-- Label: Outbound TLS Stream -->
+  <rect x="364" y="140" width="272" height="16" rx="3" fill="#FFFFFF" stroke="rgba(17,19,21,0.18)" stroke-width="0.8"/>
+  <text x="500" y="151.5" class="font-mono text-charcoal" font-size="8" font-weight="700" text-anchor="middle" letter-spacing="0.08em">OUTBOUND TLS ENCRYPTED STREAM</text>
+
+  <!-- Label: stdio / JSON-RPC -->
+  <rect x="336" y="248" width="328" height="16" rx="3" fill="#F4F2EC" stroke="rgba(127,200,169,0.8)" stroke-width="1"/>
+  <text x="500" y="259.5" class="font-mono" fill="#1B5239" font-size="8.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">stdio · JSON-RPC 2.0 (MCP 2025-11-25)</text>
+
+  <!-- Label: Local Dispatch -->
+  <rect x="404" y="620" width="192" height="16" rx="3" fill="#FFFFFF" stroke="rgba(17,19,21,0.18)" stroke-width="0.8"/>
+  <text x="500" y="631.5" class="font-mono text-muted" font-size="8" font-weight="700" text-anchor="middle" letter-spacing="0.08em">AUTHENTICATED LOCAL DISPATCH</text>
+
+  <!-- ==================== NODES ==================== -->
+
+  <!-- NODE 1: ChatGPT Web (Client) -->
+  <rect x="300" y="60" width="400" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+  <rect x="312" y="68" width="48" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+  <text x="336" y="78.5" class="font-mono text-charcoal" font-size="7.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">CLIENT</text>
+  <text x="500" y="87" class="font-sans text-charcoal" font-size="14" font-weight="800" text-anchor="middle">ChatGPT Web (chatgpt.com)</text>
+  <text x="500" y="105" class="font-mono text-muted" font-size="9" font-weight="600" text-anchor="middle">Developer Mode · MCP Client</text>
+
+  <!-- NODE 2: OpenAI Secure MCP Tunnel Gateway -->
+  <rect x="320" y="172" width="360" height="60" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+  <rect x="332" y="180" width="56" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+  <text x="360" y="190.5" class="font-mono text-charcoal" font-size="7.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">GATEWAY</text>
+  <text x="500" y="199" class="font-sans text-charcoal" font-size="13" font-weight="800" text-anchor="middle">OpenAI Secure MCP Tunnel Gateway</text>
+  <text x="500" y="215" class="font-mono text-muted" font-size="9" font-weight="600" text-anchor="middle">End-to-End Encrypted Tunnel Proxy</text>
+
+  <!-- NODE 3 (FOCAL JERICHO MINT): Policy Engine Chokepoint -->
+  <rect x="140" y="320" width="720" height="60" rx="8" fill="rgba(127,200,169,0.2)" stroke="#3D8F6C" stroke-width="1.6"/>
+  <rect x="152" y="328" width="76" height="14" rx="2" fill="#7FC8A9" stroke="#3D8F6C" stroke-width="0.8"/>
+  <text x="190" y="338.5" class="font-mono" fill="#0C2E20" font-size="7.5" font-weight="800" text-anchor="middle" letter-spacing="0.08em">CHOKEPOINT</text>
+  <text x="500" y="346" class="font-sans text-charcoal" font-size="13.5" font-weight="800" text-anchor="middle">POLICY ENGINE (Zero-Trust Enforcer)</text>
+  <text x="500" y="363" class="font-mono" fill="#134730" font-size="9.5" font-weight="600" text-anchor="middle">Identity · Risk Scoring (R0–R4) · Sandboxed Roots · Interactive Approvals</text>
+
+  <!-- SUBSYSTEM 1: Workspace -->
+  <rect x="140" y="424" width="216" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+  <rect x="148" y="432" width="28" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+  <text x="162" y="442.5" class="font-mono text-charcoal" font-size="7.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">FS</text>
+  <text x="248" y="451" class="font-sans text-charcoal" font-size="12.5" font-weight="700" text-anchor="middle">Workspace</text>
+  <text x="248" y="469" class="font-mono text-muted" font-size="8.5" font-weight="600" text-anchor="middle">Paths · Safe Diff &amp; Rollback</text>
+
+  <!-- SUBSYSTEM 2: Terminal -->
+  <rect x="392" y="424" width="216" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+  <rect x="400" y="432" width="36" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+  <text x="418" y="442.5" class="font-mono text-charcoal" font-size="7.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">EXEC</text>
+  <text x="500" y="451" class="font-sans text-charcoal" font-size="12.5" font-weight="700" text-anchor="middle">Terminal</text>
+  <text x="500" y="469" class="font-mono text-muted" font-size="8.5" font-weight="600" text-anchor="middle">Safe Exec · Command Allowlist</text>
+
+  <!-- SUBSYSTEM 3: Desktop -->
+  <rect x="644" y="424" width="216" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+  <rect x="652" y="432" width="28" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+  <text x="666" y="442.5" class="font-mono text-charcoal" font-size="7.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">OS</text>
+  <text x="752" y="451" class="font-sans text-charcoal" font-size="12.5" font-weight="700" text-anchor="middle">Desktop</text>
+  <text x="752" y="469" class="font-mono text-muted" font-size="8.5" font-weight="600" text-anchor="middle">Screen Observe · Input Dispatch</text>
+
+  <!-- NODE 4 (SECONDARY SAND ACCENT): Immutable Cryptographic Journal -->
+  <rect x="140" y="532" width="720" height="56" rx="8" fill="rgba(216,195,165,0.22)" stroke="#B09670" stroke-width="1.2"/>
+  <rect x="152" y="540" width="46" height="14" rx="2" fill="#D8C3A5" stroke="#9E8460" stroke-width="0.8"/>
+  <text x="175" y="550.5" class="font-mono" fill="#3A2E1D" font-size="7.5" font-weight="800" text-anchor="middle" letter-spacing="0.08em">AUDIT</text>
+  <text x="500" y="554" class="font-sans text-charcoal" font-size="12.5" font-weight="800" text-anchor="middle">IMMUTABLE CRYPTOGRAPHIC JOURNAL</text>
+  <text x="500" y="572" class="font-mono" fill="#54432A" font-size="9" font-weight="600" text-anchor="middle">Hash-Chained Log (SHA-256) · Tamper-Evident Security Ledger</text>
+
+  <!-- NODE 5: Your Machine (Host OS) -->
+  <rect x="300" y="668" width="400" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+  <rect x="312" y="676" width="38" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+  <text x="331" y="686.5" class="font-mono text-charcoal" font-size="7.5" font-weight="700" text-anchor="middle" letter-spacing="0.08em">HOST</text>
+  <text x="500" y="695" class="font-sans text-charcoal" font-size="13.5" font-weight="800" text-anchor="middle">Your Machine (Host Environment)</text>
+  <text x="500" y="713" class="font-mono text-muted" font-size="9" font-weight="600" text-anchor="middle">Windows · macOS · Linux Kernel</text>
+
+</svg>

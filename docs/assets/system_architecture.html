@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jericho Core Runtime · Brand Identity</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --color-charcoal: #111315;
+      --color-offwhite: #F4F2EC;
+      --color-mint:     #7FC8A9;
+      --color-sand:     #D8C3A5;
+      --color-muted:    #55595E;
+      --color-surface:  #FFFFFF;
+      --font-primary:   'Manrope', system-ui, -apple-system, sans-serif;
+      --font-tech:      'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-primary);
+      background-color: var(--color-offwhite);
+      color: var(--color-charcoal);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+    }
+
+    .frame {
+      max-width: 1080px;
+      width: 100%;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(17, 19, 21, 0.1);
+      padding-bottom: 1rem;
+    }
+
+    .brand-eyebrow {
+      font-family: var(--font-tech);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #3b8a6a;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .brand-eyebrow::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--color-mint);
+      border-radius: 2px;
+    }
+
+    h1 {
+      font-family: var(--font-primary);
+      font-size: clamp(1.8rem, 2.6vw + 0.8rem, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: var(--color-charcoal);
+    }
+
+    .palette-pill-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .color-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.55rem;
+      background: var(--color-surface);
+      border: 1px solid rgba(17, 19, 21, 0.08);
+      border-radius: 4px;
+      font-family: var(--font-tech);
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--color-charcoal);
+    }
+
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      border: 1px solid rgba(17, 19, 21, 0.15);
+    }
+
+    .diagram-card {
+      background: var(--color-surface);
+      border: 1px solid rgba(17, 19, 21, 0.1);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 20px -4px rgba(17, 19, 21, 0.04);
+      overflow-x: auto;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 900px;
+      height: auto;
+      display: block;
+    }
+
+    .footer-notes {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-tech);
+      font-size: 0.72rem;
+      color: var(--color-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    
+    <div class="header-row">
+      <div>
+        <div class="brand-eyebrow">JERICHO ARCHITECTURE · ZERO-TRUST RUNTIME</div>
+        <h1>Jericho Core Runtime</h1>
+      </div>
+      <div class="palette-pill-group">
+        <div class="color-chip"><span class="color-dot" style="background: #111315;"></span>Charcoal</div>
+        <div class="color-chip"><span class="color-dot" style="background: #F4F2EC;"></span>Off White</div>
+        <div class="color-chip"><span class="color-dot" style="background: #7FC8A9;"></span>Jericho Mint</div>
+        <div class="color-chip"><span class="color-dot" style="background: #D8C3A5;"></span>Sand</div>
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <svg viewBox="0 0 1000 792" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="jericho-brand-title jericho-brand-desc">
+        <title id="jericho-brand-title">Jericho Core Runtime Architecture — Brand Edition</title>
+        <desc id="jericho-brand-desc">Diagrama de arquitectura con la identidad visual oficial de Jericho: ChatGPT Web, OpenAI Gateway, Chokepoint Policy Engine, Subsistemas aislados, Journal Criptográfico Inmutable y Sistema Operativo Local.</desc>
+        
+        <defs>
+          <pattern id="brand-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.85" fill="#111315" opacity="0.08"/>
+          </pattern>
+          <marker id="arrow-charcoal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#111315"/>
+          </marker>
+          <marker id="arrow-mint" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#4fa580"/>
+          </marker>
+          <marker id="arrow-sand" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b09670"/>
+          </marker>
+        </defs>
+
+        <!-- Canvas Background -->
+        <rect width="100%" height="100%" fill="#FBFBF8"/>
+        <rect width="100%" height="100%" fill="url(#brand-dots)"/>
+
+        <!-- ZONE: JERICHO CORE RUNTIME (Boundary Box) -->
+        <rect x="100" y="276" width="800" height="348" rx="8"
+              fill="rgba(127,200,169,0.03)" stroke="rgba(17,19,21,0.18)" stroke-width="1.2" stroke-dasharray="6,4"/>
+        
+        <rect x="120" y="268" width="184" height="16" rx="3" fill="#F4F2EC" stroke="rgba(17,19,21,0.12)" stroke-width="0.8"/>
+        <text x="212" y="280" fill="#111315" font-size="8.5" font-family="'JetBrains Mono', monospace" font-weight="700"
+              text-anchor="middle" letter-spacing="0.1em">JERICHO CORE RUNTIME</text>
+
+        <rect x="736" y="268" width="144" height="16" rx="3" fill="#F4F2EC" stroke="rgba(127,200,169,0.4)" stroke-width="0.8"/>
+        <text x="808" y="280" fill="#317859" font-size="8" font-family="'JetBrains Mono', monospace" font-weight="600"
+              text-anchor="middle" letter-spacing="0.08em">ZERO-TRUST ENCLAVE</text>
+
+        <!-- ==================== CONNECTORS & FLOWS (Z-Order: Behind Nodes) ==================== -->
+
+        <!-- Client -> Gateway -->
+        <line x1="500" y1="124" x2="500" y2="172" stroke="#111315" stroke-width="1.4" marker-end="url(#arrow-charcoal)"/>
+
+        <!-- Gateway -> Chokepoint Policy Engine -->
+        <line x1="500" y1="232" x2="500" y2="320" stroke="#4fa580" stroke-width="1.6" marker-end="url(#arrow-mint)"/>
+
+        <!-- Policy Engine -> 3 Subsystems -->
+        <line x1="248" y1="380" x2="248" y2="424" stroke="#111315" stroke-width="1.2" marker-end="url(#arrow-charcoal)"/>
+        <line x1="500" y1="380" x2="500" y2="424" stroke="#111315" stroke-width="1.2" marker-end="url(#arrow-charcoal)"/>
+        <line x1="752" y1="380" x2="752" y2="424" stroke="#111315" stroke-width="1.2" marker-end="url(#arrow-charcoal)"/>
+
+        <!-- 3 Subsystems -> Immutable Cryptographic Journal -->
+        <line x1="248" y1="488" x2="248" y2="532" stroke="#b09670" stroke-width="1.2" marker-end="url(#arrow-sand)"/>
+        <line x1="500" y1="488" x2="500" y2="532" stroke="#b09670" stroke-width="1.2" marker-end="url(#arrow-sand)"/>
+        <line x1="752" y1="488" x2="752" y2="532" stroke="#b09670" stroke-width="1.2" marker-end="url(#arrow-sand)"/>
+
+        <!-- Journal -> Host Machine -->
+        <line x1="500" y1="588" x2="500" y2="668" stroke="#111315" stroke-width="1.5" marker-end="url(#arrow-charcoal)"/>
+
+        <!-- ==================== ARROW LABELS & MASKS ==================== -->
+
+        <!-- Label: Outbound TLS Stream -->
+        <rect x="364" y="140" width="272" height="16" rx="3" fill="#FFFFFF" stroke="rgba(17,19,21,0.15)" stroke-width="0.8"/>
+        <text x="500" y="151" fill="#111315" font-size="8" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.08em">OUTBOUND TLS ENCRYPTED STREAM</text>
+
+        <!-- Label: stdio / JSON-RPC -->
+        <rect x="336" y="248" width="328" height="16" rx="3" fill="#F4F2EC" stroke="rgba(127,200,169,0.7)" stroke-width="1"/>
+        <text x="500" y="259" fill="#246146" font-size="8.5" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.08em">stdio · JSON-RPC 2.0 (MCP 2025-11-25)</text>
+
+        <!-- Label: Local Dispatch -->
+        <rect x="404" y="620" width="192" height="16" rx="3" fill="#FFFFFF" stroke="rgba(17,19,21,0.15)" stroke-width="0.8"/>
+        <text x="500" y="631" fill="#55595E" font-size="8" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle" letter-spacing="0.08em">AUTHENTICATED LOCAL DISPATCH</text>
+
+        <!-- ==================== NODES ==================== -->
+
+        <!-- NODE 1: ChatGPT Web (Client) -->
+        <rect x="300" y="60" width="400" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+        <rect x="312" y="68" width="48" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+        <text x="336" y="78" fill="#111315" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">CLIENT</text>
+        <text x="500" y="87" fill="#111315" font-size="14" font-weight="700" font-family="'Manrope', sans-serif" text-anchor="middle">ChatGPT Web (chatgpt.com)</text>
+        <text x="500" y="105" fill="#55595E" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">Developer Mode · MCP Client</text>
+
+        <!-- NODE 2: OpenAI Secure MCP Tunnel Gateway -->
+        <rect x="320" y="172" width="360" height="60" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+        <rect x="332" y="180" width="56" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+        <text x="360" y="190" fill="#111315" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">GATEWAY</text>
+        <text x="500" y="199" fill="#111315" font-size="13" font-weight="700" font-family="'Manrope', sans-serif" text-anchor="middle">OpenAI Secure MCP Tunnel Gateway</text>
+        <text x="500" y="215" fill="#55595E" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">End-to-End Encrypted Tunnel Proxy</text>
+
+        <!-- NODE 3 (FOCAL JERICHO MINT): Policy Engine Chokepoint -->
+        <rect x="140" y="320" width="720" height="60" rx="8" fill="rgba(127,200,169,0.18)" stroke="#4fa580" stroke-width="1.5"/>
+        <rect x="152" y="328" width="72" height="14" rx="2" fill="#7FC8A9" stroke="#3d8f6c" stroke-width="0.8"/>
+        <text x="188" y="338" fill="#0c2e20" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">CHOKEPOINT</text>
+        <text x="500" y="346" fill="#111315" font-size="13.5" font-weight="800" font-family="'Manrope', sans-serif" text-anchor="middle">POLICY ENGINE (Zero-Trust Enforcer)</text>
+        <text x="500" y="363" fill="#1b5239" font-size="9.5" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle">Identity · Risk Scoring (R0–R4) · Sandboxed Roots · Interactive Approvals</text>
+
+        <!-- SUBSYSTEM 1: Workspace -->
+        <rect x="140" y="424" width="216" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+        <rect x="148" y="432" width="28" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+        <text x="162" y="442" fill="#111315" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">FS</text>
+        <text x="248" y="451" fill="#111315" font-size="12.5" font-weight="700" font-family="'Manrope', sans-serif" text-anchor="middle">Workspace</text>
+        <text x="248" y="469" fill="#55595E" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle">Paths · Safe Diff &amp; Rollback</text>
+
+        <!-- SUBSYSTEM 2: Terminal -->
+        <rect x="392" y="424" width="216" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+        <rect x="400" y="432" width="36" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+        <text x="418" y="442" fill="#111315" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">EXEC</text>
+        <text x="500" y="451" fill="#111315" font-size="12.5" font-weight="700" font-family="'Manrope', sans-serif" text-anchor="middle">Terminal</text>
+        <text x="500" y="469" fill="#55595E" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle">Safe Exec · Command Allowlist</text>
+
+        <!-- SUBSYSTEM 3: Desktop -->
+        <rect x="644" y="424" width="216" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+        <rect x="652" y="432" width="28" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+        <text x="666" y="442" fill="#111315" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">OS</text>
+        <text x="752" y="451" fill="#111315" font-size="12.5" font-weight="700" font-family="'Manrope', sans-serif" text-anchor="middle">Desktop</text>
+        <text x="752" y="469" fill="#55595E" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle">Screen Observe · Input Dispatch</text>
+
+        <!-- NODE 4 (SECONDARY SAND ACCENT): Immutable Cryptographic Journal -->
+        <rect x="140" y="532" width="720" height="56" rx="8" fill="rgba(216,195,165,0.22)" stroke="#b09670" stroke-width="1.2"/>
+        <rect x="152" y="540" width="46" height="14" rx="2" fill="#D8C3A5" stroke="#9e8460" stroke-width="0.8"/>
+        <text x="175" y="550" fill="#3a2e1d" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">AUDIT</text>
+        <text x="500" y="554" fill="#111315" font-size="12.5" font-weight="800" font-family="'Manrope', sans-serif" text-anchor="middle">IMMUTABLE CRYPTOGRAPHIC JOURNAL</text>
+        <text x="500" y="572" fill="#54432a" font-size="9" font-family="'JetBrains Mono', monospace" font-weight="500" text-anchor="middle">Hash-Chained Log (SHA-256) · Tamper-Evident Security Ledger</text>
+
+        <!-- NODE 5: Your Machine (Host OS) -->
+        <rect x="300" y="668" width="400" height="64" rx="8" fill="#FFFFFF" stroke="#111315" stroke-width="1.2"/>
+        <rect x="312" y="676" width="38" height="14" rx="2" fill="rgba(17,19,21,0.06)" stroke="rgba(17,19,21,0.2)" stroke-width="0.8"/>
+        <text x="331" y="686" fill="#111315" font-size="7.5" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle" letter-spacing="0.08em">HOST</text>
+        <text x="500" y="695" fill="#111315" font-size="13.5" font-weight="700" font-family="'Manrope', sans-serif" text-anchor="middle">Your Machine (Host Environment)</text>
+        <text x="500" y="713" fill="#55595E" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">Windows · macOS · Linux Kernel</text>
+
+      </svg>
+    </div>
+
+    <div class="footer-notes">
+      <div>✦ Primary Font: Manrope (Headings &amp; UI) · Secondary: JetBrains Mono (Specs &amp; Badges)</div>
+      <div>Zero-Trust Guardrail Protocol</div>
+    </div>
+
+  </div>
+</body>
+</html>

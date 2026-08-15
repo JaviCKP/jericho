@@ -51,6 +51,13 @@ While web-based AI models like ChatGPT Web have unlimited reasoning capabilities
 
 ## 🏛️ System Architecture
 
+<p align="center">
+  <img src="docs/assets/system_architecture.svg" alt="Jericho Core Runtime System Architecture" width="100%" />
+</p>
+
+<details>
+<summary><b>🔍 View Text Architecture Specification</b></summary>
+
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        ChatGPT Web (chatgpt.com)                       │
@@ -91,6 +98,8 @@ While web-based AI models like ChatGPT Web have unlimited reasoning capabilities
 │                  Your Machine (Windows / macOS / Linux)                │
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 ---
 
