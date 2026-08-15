@@ -48,7 +48,7 @@ class Dispatcher {
     return { alias, target, enabled };
   }
 
-  async call(name, rawArgs) {
+  async call(name, rawArgs, trustedContext = null) {
     const traceId = newTraceId();
     const started = Date.now();
     const def = BY_NAME.get(name);
@@ -56,6 +56,7 @@ class Dispatcher {
     if (!def) {
       const legacy = this._resolveLegacy(name);
       if (legacy) {
+<<<<<<< HEAD
         if (legacy.target && legacy.enabled) {
           // Traducción inteligente para write_file / create_file
           if (name === 'write_file' || name === 'create_file') {
@@ -84,18 +85,60 @@ class Dispatcher {
           }
           // Traducción inteligente para run_command / run_powershell
           if (name === 'run_command' || name === 'run_powershell' || name === 'execute_command') {
-            const cmd = (rawArgs && (rawArgs.command || rawArgs.cmd || rawArgs.script)) || '';
-            if (cmd) {
-              const parts = cmd.trim().split(/\s+/);
-              const prog = parts[0];
-              const pArgs = parts.slice(1);
-              this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'terminal.exec', trace_id: traceId });
-              return this.call('terminal.exec', { action: 'run', program: prog, args: pArgs });
-            }
+        // Traducción inteligente automática para herramientas legacy de GPTs personalizados
+        if (name === 'write_file' || name === 'create_file') {
+          const filePath = (rawArgs && (rawArgs.path || rawArgs.file_path || rawArgs.filename)) || '';
+          const content = (rawArgs && rawArgs.content !== undefined) ? String(rawArgs.content) : '';
+          if (filePath) {
+            const lines = content.split(/\r?\n/);
+            const patch = [
+              `--- /dev/null`,
+              `+++ b/${filePath.replace(/\\/g, '/')}`,
+              `@@ -0,0 +1,${lines.length} @@`,
+              ...lines.map((l) => `+${l}`),
+              '',
+            ].join('\n');
+            this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'workspace.apply_patch', trace_id: traceId });
+            return this.call('workspace.apply_patch', { patch, dry_run: false }, trustedContext);
           }
+        }
+        if (name === 'read_file') {
+          const filePath = (rawArgs && (rawArgs.path || rawArgs.file_path)) || '';
+          if (filePath) {
+            this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'workspace.read', trace_id: traceId });
+            return this.call('workspace.read', { paths: [filePath] }, trustedContext);
+          }
+        }
+        if (name === 'run_powershell') {
+          const cmd = (rawArgs && (rawArgs.command || rawArgs.cmd || rawArgs.script)) || '';
+          if (cmd) {
+            this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'terminal.exec', trace_id: traceId });
+            return this.call('terminal.exec', { action: 'run', program: 'powershell', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd] }, trustedContext);
+          }
+        }
+        if (name === 'run_command' || name === 'execute_command') {
+          const cmd = (rawArgs && (rawArgs.command || rawArgs.cmd || rawArgs.script)) || '';
+          if (cmd) {
+            const parts = cmd.trim().split(/\s+/);
+            const prog = parts[0];
+            const pArgs = parts.slice(1);
+            this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'terminal.exec', trace_id: traceId });
+            return this.call('terminal.exec', { action: 'run', program: prog, args: pArgs }, trustedContext);
+          }
+        }
+        if (name === 'get_system_info' || name === 'get_system_health') {
+          this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'ghostpc.status', trace_id: traceId });
+          return this.call('ghostpc.status', {}, trustedContext);
+        }
+        if (name === 'list_windows' || name === 'get_open_windows') {
+          this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: 'desktop.observe', trace_id: traceId });
+          return this.call('desktop.observe', { action: 'windows' }, trustedContext);
+        }
+
+        if (this.legacyMode === 'translate' && legacy.target && legacy.enabled) {
           const merged = { ...(legacy.alias.args || {}), ...(rawArgs || {}) };
           this.runtime.journal.append({ kind: 'tool.legacy_translated', from: name, to: legacy.target.name, trace_id: traceId });
-          return this.call(legacy.target.name, merged);
+          return this.call(legacy.target.name, merged, trustedContext);
         }
         return this._error(
           traceId,
@@ -140,10 +183,21 @@ class Dispatcher {
       assertValidInput(def.inputSchema, args, name);
 
       // 3. Identidad explícita.
-      const session = {
-        session_id: validateExternalId(args.session_id, 'session_id') || ANONYMOUS_SESSION,
-        project_id: validateExternalId(args.project_id, 'project_id'),
-      };
+      let authenticated = null;
+      if (trustedContext && trustedContext.sessionToken) {
+        authenticated = this.runtime.sessionAuthority.authenticate(trustedContext.sessionToken);
+      } else if (trustedContext && trustedContext.session_id && trustedContext.user_id && trustedContext.project_id) {
+        throw new GhostError(CODES.POLICY_DENIED, 'El contexto de sesión debe venir firmado por la autoridad del servidor.');
+      }
+      const session = authenticated ? {
+        session_id: validateExternalId(authenticated.session_id, 'session_id'),
+        user_id: validateExternalId(authenticated.user_id, 'user_id'),
+        project_id: validateExternalId(authenticated.project_id, 'project_id'),
+        permissions: authenticated.permissions || [],
+        profile: authenticated.profile || null,
+        policy_revision: authenticated.policy_revision,
+        nonce: authenticated.nonce,
+      } : { session_id: ANONYMOUS_SESSION, user_id: null, project_id: null, permissions: [], profile: null };
 
       const ctx = {
         runtime: this.runtime,
@@ -152,6 +206,7 @@ class Dispatcher {
         session,
         def,
         dryRun: args.dry_run === true,
+        authenticated,
       };
 
       // 4. Efectos declarados por la propia herramienta.
@@ -251,8 +306,6 @@ class Dispatcher {
       remediation: ghost.remediation || null,
       details: redact.redactValue(ghost.details || {}),
     };
-    // `risk` sólo existe si se llegó a evaluar la política: un fallo de esquema
-    // o un perfil desactivado ocurren antes de que haya decisión.
     if (decision) {
       structured.risk = decision.effective_risk;
       structured.approval = decision.approval;

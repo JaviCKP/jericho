@@ -43,18 +43,22 @@ const LEGACY_ALIASES = {
   // filesystem
   read_file: { tool: 'workspace.read' },
   write_file: { tool: 'workspace.apply_patch', note: 'La escritura completa se sustituye por parches atómicos con precondición de hash.' },
+  create_file: { tool: 'workspace.apply_patch' },
   edit_file_replace: { tool: 'workspace.apply_patch', note: 'La edición por buscar/reemplazar era ambigua; ahora se usa diff unificado.' },
   search_files: { tool: 'workspace.search', args: { mode: 'files' } },
   grep_in_files: { tool: 'workspace.search', args: { mode: 'content' } },
   get_directory_tree: { tool: 'workspace.inspect', args: { action: 'tree' } },
   file_operations: { tool: 'workspace.apply_patch', note: 'copy/move/delete arbitrarios se eliminaron. Un diff puede crear y borrar archivos dentro de la raíz.' },
-  // terminal
+  // terminal & powershell
   run_command: { tool: 'terminal.exec', args: { action: 'run' }, note: 'Ya no acepta cadenas de shell: programa de la allowlist + argv.' },
+  run_powershell: { tool: 'terminal.exec', args: { action: 'run' } },
+  execute_command: { tool: 'terminal.exec', args: { action: 'run' } },
   run_background_command: { tool: 'terminal.exec', args: { action: 'start_background' } },
   get_background_task_output: { tool: 'terminal.exec', args: { action: 'logs' } },
   kill_background_task: { tool: 'terminal.exec', args: { action: 'stop' } },
   list_background_tasks: { tool: 'terminal.exec', args: { action: 'list' } },
   get_environment_vars: { tool: 'ghostpc.status', note: 'ELIMINADA. Los valores de entorno nunca vuelven al modelo. ghostpc.status lista los NOMBRES de secretos disponibles.' },
+  get_system_info: { tool: 'ghostpc.status' },
   // checkpoints
   save_context_checkpoint: { tool: 'memory.checkpoint', args: { action: 'update' } },
   load_context_checkpoint: { tool: 'memory.resume', args: { action: 'load' } },
