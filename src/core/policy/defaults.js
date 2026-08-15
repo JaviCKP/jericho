@@ -12,8 +12,8 @@
 const DEFAULT_POLICY = {
   schema_version: 1,
 
-  /** Perfiles activos. Admin queda desactivado por defecto. */
-  profiles: ['core_read', 'development'],
+  /** Perfiles activos. */
+  profiles: ['core_read', 'development', 'desktop'],
 
   /** Riesgo máximo permitido en ningún caso. R4 exige activarlo explícitamente. */
   max_risk: 'R3',
@@ -99,6 +99,8 @@ const DEFAULT_POLICY = {
       'go', 'cargo', 'rustc',
       'dotnet', 'java', 'mvn', 'gradle',
       'make',
+      'powershell', 'powershell.exe', 'pwsh',
+      'notepad', 'explorer', 'code',
     ],
     /** Subcomandos prohibidos por programa (aunque el programa esté permitido). */
     denied_subcommands: {
