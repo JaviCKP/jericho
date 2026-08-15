@@ -6,7 +6,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const { formatTextResponse, formatImageResponse } = require('../utils/helpers');
 const logger = require('../utils/logger');
-const { isWindows } = require('../utils/platform');
+const { isWindows, isMac, isLinux } = require('../utils/platform');
 
 // Configuración de respuesta ágil para nut-js
 mouse.config.autoDelayMs = 15;
@@ -44,22 +44,20 @@ const KEY_MAP = {
   win: Key.LeftSuper,
   windows: Key.LeftSuper,
   super: Key.LeftSuper,
+  cmd: Key.LeftSuper,
+  command: Key.LeftSuper,
   ctrl: Key.LeftControl,
   control: Key.LeftControl,
   alt: Key.LeftAlt,
+  option: Key.LeftAlt,
   shift: Key.LeftShift,
 };
 
-/**
- * Superpone una cuadrícula de coordenadas sobre la imagen para facilitar la visión de IA.
- */
 async function drawCoordinateGrid(imageBuffer, step = 200) {
   try {
     const image = await Jimp.read(imageBuffer);
     const width = image.bitmap.width;
     const height = image.bitmap.height;
-
-    // Dibujar líneas de cuadrícula semitransparentes en rojo/cyan
     const gridColor = 0xFF000088; // Rojo semitransparente
 
     for (let x = 0; x < width; x += step) {
@@ -75,7 +73,7 @@ async function drawCoordinateGrid(imageBuffer, step = 200) {
 
     return await image.getBuffer('image/png');
   } catch (err) {
-    logger.warn('Error aplicando cuadrícula de coordenadas a la captura', { error: err.message });
+    logger.warn('Error aplicando cuadrícula de coordenadas', { error: err.message });
     return imageBuffer;
   }
 }
@@ -83,17 +81,17 @@ async function drawCoordinateGrid(imageBuffer, step = 200) {
 const visionGuiTools = [
   {
     name: 'take_screenshot',
-    description: 'Captura la pantalla completa en tiempo real y la devuelve como imagen para que puedas ver el escritorio, ventanas activas, botones y mensajes. Opcionalmente añade una cuadrícula de coordenadas para calcular clics exactos.',
+    description: 'Captura la pantalla completa en tiempo real y la devuelve como imagen PNG. Opcionalmente añade una cuadrícula de coordenadas cada 200px para calcular clics exactos.',
     inputSchema: {
       type: 'object',
       properties: {
         withCoordinateGrid: {
           type: 'boolean',
-          description: 'Si es true, dibuja una cuadrícula de coordenadas (cada 200px) sobre la imagen para facilitar la identificación de coordenadas X/Y.',
+          description: 'Si es true, dibuja una cuadrícula de coordenadas sobre la imagen para identificar coordenadas X/Y.',
         },
         savePath: {
           type: 'string',
-          description: 'Ruta opcional en disco donde guardar una copia del archivo PNG (ej. C:\\Users\\javi\\ChatGPT-Workspace\\captura.png).',
+          description: 'Ruta opcional en disco donde guardar una copia del archivo PNG.',
         },
       },
     },
@@ -113,7 +111,7 @@ const visionGuiTools = [
         },
         clicks: {
           type: 'number',
-          description: 'Número de clics: 1 = normal, 2 = doble clic, 3 = triple clic (por defecto 1)',
+          description: 'Número de clics: 1 = normal, 2 = doble clic (por defecto 1)',
         },
       },
       required: ['x', 'y'],
@@ -121,7 +119,7 @@ const visionGuiTools = [
   },
   {
     name: 'mouse_move',
-    description: 'Mueve suavemente el cursor del ratón a las coordenadas (X, Y) sin hacer clic.',
+    description: 'Mueve el cursor del ratón a las coordenadas (X, Y) sin hacer clic.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -147,7 +145,7 @@ const visionGuiTools = [
   },
   {
     name: 'mouse_scroll',
-    description: 'Desplaza la rueda del ratón (scroll) hacia arriba o abajo en la posición actual del cursor.',
+    description: 'Desplaza la rueda del ratón (scroll) hacia arriba o abajo en la posición actual.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -172,7 +170,7 @@ const visionGuiTools = [
   },
   {
     name: 'press_hotkey',
-    description: 'Presiona combinaciones de teclas o atajos (ej: ["ctrl", "c"], ["alt", "tab"], ["win", "r"], ["enter"], ["escape"]).',
+    description: 'Presiona combinaciones de teclas o atajos (ej: ["ctrl", "c"], ["cmd", "space"], ["alt", "tab"], ["win", "r"], ["enter"]).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -195,7 +193,7 @@ const visionGuiTools = [
   },
   {
     name: 'list_windows',
-    description: 'Lista las ventanas abiertas y visibles en el escritorio con su identificador, título y nombre del proceso.',
+    description: 'Lista las ventanas abiertas y visibles en el escritorio con su identificador, título y nombre de aplicación (Compatible con Windows, macOS y Linux).',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -203,13 +201,13 @@ const visionGuiTools = [
   },
   {
     name: 'focus_window',
-    description: 'Trae una ventana al primer plano del escritorio según su título o proceso.',
+    description: 'Trae una ventana al primer plano del escritorio según su título o nombre de aplicación (Compatible con Windows, macOS y Linux).',
     inputSchema: {
       type: 'object',
       properties: {
         title: {
           type: 'string',
-          description: 'Parte del título de la ventana o nombre del proceso a enfocar (ej. "Notepad", "Visual Studio Code", "Chrome").',
+          description: 'Nombre de la aplicación o título de ventana a enfocar (ej. "Visual Studio Code", "Chrome", "Terminal", "Notepad").',
         },
       },
       required: ['title'],
@@ -328,74 +326,105 @@ async function handleVisionGuiTool(name, args) {
       return formatTextResponse({
         screenWidth: width,
         screenHeight: height,
+        platform: process.platform,
         units: 'pixels',
       });
     }
 
     case 'list_windows': {
-      if (!isWindows) {
-        return formatTextResponse('El listado detallado de ventanas está optimizado para Windows.', false);
-      }
-
-      const psCmd = `Get-Process | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object Id, ProcessName, MainWindowTitle | ConvertTo-Json`;
-      return new Promise((resolve) => {
-        exec(psCmd, { shell: 'powershell.exe' }, (err, stdout) => {
-          if (err) {
-            resolve(formatTextResponse(`Error listando ventanas: ${err.message}`, true));
-          } else {
+      if (isWindows) {
+        const psCmd = `Get-Process | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object Id, ProcessName, MainWindowTitle | ConvertTo-Json`;
+        return new Promise((resolve) => {
+          exec(psCmd, { shell: 'powershell.exe' }, (err, stdout) => {
+            if (err) return resolve(formatTextResponse(`Error: ${err.message}`, true));
             try {
-              const windows = JSON.parse(stdout || '[]');
-              resolve(formatTextResponse({ totalWindows: Array.isArray(windows) ? windows.length : 1, windows: windows }));
+              let windows = JSON.parse(stdout || '[]');
+              if (!Array.isArray(windows)) windows = [windows];
+              resolve(formatTextResponse({ totalWindows: windows.length, windows: windows }));
             } catch (e) {
-              resolve(formatTextResponse(stdout || 'No se encontraron ventanas principales activas.'));
+              resolve(formatTextResponse(stdout || 'No se encontraron ventanas visibles.'));
             }
-          }
+          });
         });
-      });
+      } else if (isMac) {
+        // macOS AppleScript
+        const osaCmd = `osascript -e 'tell application "System Events" to get name of every process whose visible is true'`;
+        return new Promise((resolve) => {
+          exec(osaCmd, (err, stdout) => {
+            if (err) return resolve(formatTextResponse(`Error en macOS: ${err.message}`, true));
+            const apps = stdout.split(',').map((a) => ({ name: a.trim() })).filter((a) => a.name);
+            resolve(formatTextResponse({ totalWindows: apps.length, applications: apps }));
+          });
+        });
+      } else if (isLinux) {
+        // Linux wmctrl fallback
+        return new Promise((resolve) => {
+          exec('wmctrl -l', (err, stdout) => {
+            if (err) {
+              return resolve(formatTextResponse('Para listar ventanas en Linux se recomienda instalar wmctrl: sudo apt-get install wmctrl', false));
+            }
+            const lines = stdout.split('\n').filter(Boolean);
+            resolve(formatTextResponse({ totalWindows: lines.length, raw: lines }));
+          });
+        });
+      }
+      return formatTextResponse('Listado no disponible para este OS.');
     }
 
     case 'focus_window': {
-      if (!isWindows) {
-        return formatTextResponse('Enfocar ventana está optimizado para Windows.', false);
-      }
+      const query = args.title;
 
-      const query = args.title.replace(/'/g, "''");
-      const psScript = `
-        $target = Get-Process | Where-Object { $_.MainWindowTitle -like '*${query}*' -or $_.ProcessName -like '*${query}*' } | Select-Object -First 1
-        if ($target) {
-            $h = $target.MainWindowHandle
-            Add-Type @"
-            using System;
-            using System.Runtime.InteropServices;
-            public class WinFocus {
-                [DllImport("user32.dll")]
-                public static extern bool SetForegroundWindow(IntPtr hWnd);
-                [DllImport("user32.dll")]
-                public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-            }
+      if (isWindows) {
+        const safeQuery = query.replace(/'/g, "''");
+        const psScript = `
+          $target = Get-Process | Where-Object { $_.MainWindowTitle -like '*${safeQuery}*' -or $_.ProcessName -like '*${safeQuery}*' } | Select-Object -First 1
+          if ($target) {
+              $h = $target.MainWindowHandle
+              Add-Type @"
+              using System;
+              using System.Runtime.InteropServices;
+              public class WinFocus {
+                  [DllImport("user32.dll")]
+                  public static extern bool SetForegroundWindow(IntPtr hWnd);
+                  [DllImport("user32.dll")]
+                  public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+              }
 "@
-            [WinFocus]::ShowWindow($h, 9)
-            [WinFocus]::SetForegroundWindow($h)
-            Write-Output "OK: $($target.MainWindowTitle) ($($target.ProcessName))"
-        } else {
-            Write-Output "NOT_FOUND"
-        }
-      `;
-
-      return new Promise((resolve) => {
-        exec(psScript, { shell: 'powershell.exe' }, (err, stdout) => {
-          if (err) {
-            resolve(formatTextResponse(`Error al enfocar ventana: ${err.message}`, true));
+              [WinFocus]::ShowWindow($h, 9)
+              [WinFocus]::SetForegroundWindow($h)
+              Write-Output "OK: $($target.MainWindowTitle) ($($target.ProcessName))"
           } else {
+              Write-Output "NOT_FOUND"
+          }
+        `;
+        return new Promise((resolve) => {
+          exec(psScript, { shell: 'powershell.exe' }, (err, stdout) => {
+            if (err) return resolve(formatTextResponse(`Error: ${err.message}`, true));
             const out = stdout.trim();
             if (out.startsWith('OK:')) {
-              resolve(formatTextResponse(`Ventana enfocada con éxito: ${out.replace('OK:', '').trim()}`));
+              resolve(formatTextResponse(`Ventana enfocada: ${out.replace('OK:', '').trim()}`));
             } else {
-              resolve(formatTextResponse(`No se encontró ninguna ventana activa con el criterio '${args.title}'`, true));
+              resolve(formatTextResponse(`No se encontró ninguna ventana con '${query}'`, true));
             }
-          }
+          });
         });
-      });
+      } else if (isMac) {
+        const osaCmd = `osascript -e 'tell application "${query}" to activate'`;
+        return new Promise((resolve) => {
+          exec(osaCmd, (err) => {
+            if (err) return resolve(formatTextResponse(`Error activando '${query}' en macOS: ${err.message}`, true));
+            resolve(formatTextResponse(`Aplicación '${query}' traída al frente con éxito.`));
+          });
+        });
+      } else if (isLinux) {
+        return new Promise((resolve) => {
+          exec(`wmctrl -a "${query}"`, (err) => {
+            if (err) return resolve(formatTextResponse(`Error: ejecuta 'sudo apt-get install wmctrl' para control de foco en Linux.`, true));
+            resolve(formatTextResponse(`Ventana '${query}' enfocada en Linux.`));
+          });
+        });
+      }
+      return formatTextResponse('Enfoque no soportado en esta plataforma.', true);
     }
 
     default:

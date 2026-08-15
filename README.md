@@ -213,11 +213,27 @@ He actualizado la hoja de contexto marcando como completada la animación.
 
 ---
 
-## 🖥️ Modos de Ejecución en Windows
+## 🖥️ Modos de Ejecución por Sistema Operativo
 
-- **Modo Consola (Primer plano):** Doble clic en **`start.bat`** (ideal para desarrollo y logs en directo).
-- **Modo 100% Invisible (Segundo plano):** Doble clic en **`scripts/start-silent.vbs`** (cero ventanas, cero pestañas).
-- **Modo Inicio Automático (Como Administrador):** Doble clic en **`install-autostart.bat`** (arranca con Windows con privilegios elevados sin ventanas emergentes de UAC).
+### 🪟 Windows
+- **Modo Consola:** Doble clic en **`start.bat`** (o `npm start`).
+- **Modo 100% Invisible:** Doble clic en **`scripts/start-silent.vbs`** (cero ventanas, cero pestañas).
+- **Inicio Automático (Administrador):** Doble clic en **`install-autostart.bat`** (registra tarea en Task Scheduler).
+
+### 🍎 macOS
+- **Instalación y Configuración:** `./setup.sh` (o `npm run setup`).
+- **Ejecución:** `./start.sh` (o `npm start`).
+- **Permisos del Sistema:** La primera vez que uses Computer Use, macOS te solicitará conceder permisos a tu terminal en:
+  * *Ajustes del Sistema -> Privacidad y Seguridad -> Accesibilidad*
+  * *Ajustes del Sistema -> Privacidad y Seguridad -> Grabación de Pantalla*
+
+### 🐧 Linux
+- **Instalación y Configuración:** `./setup.sh` (o `npm run setup`).
+- **Ejecución:** `./start.sh` (o `npm start`).
+- **Dependencias GUI Recomendadas:** Para capturas y gestión de ventanas en X11:
+  ```bash
+  sudo apt-get install wmctrl xdotool scrot
+  ```
 
 ---
 

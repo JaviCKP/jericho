@@ -1,11 +1,11 @@
 const { exec } = require('child_process');
 const { formatTextResponse } = require('../utils/helpers');
-const { getPlatformInfo, isWindows } = require('../utils/platform');
+const { getPlatformInfo, isWindows, isMac, isLinux } = require('../utils/platform');
 
 const systemProcessTools = [
   {
     name: 'get_system_health',
-    description: 'Devuelve información completa del estado del ordenador: CPU, memoria libre/total, discos, usuario activo, elevación de Administrador y tiempo encendido.',
+    description: 'Devuelve información completa del estado del ordenador: CPU, memoria libre/total, discos, usuario activo, elevación de Administrador y tiempo encendido (Windows, macOS y Linux).',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -35,19 +35,19 @@ const systemProcessTools = [
       type: 'object',
       properties: {
         pid: { type: 'number', description: 'ID del proceso a finalizar.' },
-        processName: { type: 'string', description: 'Nombre del ejecutable a cerrar (ej. "notepad.exe", "node.exe").' },
+        processName: { type: 'string', description: 'Nombre del ejecutable a cerrar (ej. "notepad.exe", "node").' },
       },
     },
   },
   {
     name: 'open_app_or_url',
-    description: 'Abre una aplicación de Windows, un archivo local con su programa predeterminado o una URL en el navegador.',
+    description: 'Abre una aplicación, un archivo local con su programa predeterminado o una URL en el navegador (Windows, macOS y Linux).',
     inputSchema: {
       type: 'object',
       properties: {
         target: {
           type: 'string',
-          description: 'Nombre de la aplicación (ej. calc, notepad, code), ruta de archivo o URL web (ej. https://github.com).',
+          description: 'Nombre de la aplicación, ruta de archivo o URL web (ej. https://github.com).',
         },
       },
       required: ['target'],
@@ -87,9 +87,31 @@ async function handleSystemProcessTool(name, args) {
             resolve(formatTextResponse(info));
           });
         });
+      } else {
+        // macOS / Linux df -k
+        return new Promise((resolve) => {
+          exec('df -k /', (err, stdout) => {
+            if (!err && stdout) {
+              const lines = stdout.trim().split('\n');
+              if (lines.length > 1) {
+                const parts = lines[1].split(/\s+/);
+                if (parts.length >= 4) {
+                  const totalKB = parseInt(parts[1], 10);
+                  const availKB = parseInt(parts[3], 10);
+                  info.disks = [
+                    {
+                      mount: parts[5] || '/',
+                      freeGB: (availKB / (1024 ** 2)).toFixed(1) + ' GB',
+                      totalGB: (totalKB / (1024 ** 2)).toFixed(1) + ' GB',
+                    },
+                  ];
+                }
+              }
+            }
+            resolve(formatTextResponse(info));
+          });
+        });
       }
-
-      return formatTextResponse(info);
     }
 
     case 'list_processes': {
@@ -118,7 +140,7 @@ async function handleSystemProcessTool(name, args) {
         });
       } else {
         return new Promise((resolve) => {
-          exec('ps aux --sort=-%mem | head -n 50', (err, stdout) => {
+          exec(`ps aux | head -n ${max}`, (err, stdout) => {
             resolve(formatTextResponse(stdout || err.message));
           });
         });
@@ -141,7 +163,7 @@ async function handleSystemProcessTool(name, args) {
         if (args.pid) {
           cmd = `kill -9 ${args.pid}`;
         } else {
-          cmd = `pkill -9 "${args.processName}"`;
+          cmd = `pkill -9 -f "${args.processName}"`;
         }
       }
 
@@ -158,14 +180,21 @@ async function handleSystemProcessTool(name, args) {
 
     case 'open_app_or_url': {
       const target = args.target;
-      const cmd = isWindows ? `start "" "${target}"` : `open "${target}"`;
+      let cmd = '';
+      if (isWindows) {
+        cmd = `start "" "${target}"`;
+      } else if (isMac) {
+        cmd = `open "${target}"`;
+      } else {
+        cmd = `xdg-open "${target}"`;
+      }
 
       return new Promise((resolve) => {
-        exec(cmd, { shell: isWindows ? 'cmd.exe' : '/bin/sh' }, (err) => {
+        exec(cmd, (err) => {
           if (err) {
             resolve(formatTextResponse(`Error abriendo '${target}': ${err.message}`, true));
           } else {
-            resolve(formatTextResponse(`Se ha abierto '${target}' en el escritorio con éxito.`));
+            resolve(formatTextResponse(`Se ha abierto '${target}' con éxito.`));
           }
         });
       });
