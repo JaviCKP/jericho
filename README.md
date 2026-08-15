@@ -1,4 +1,4 @@
-# ⚡ GhostPC (OpenPC-MCP): El Puente Autónomo entre ChatGPT y tu Ordenador
+# 🏰 JERICHO (OpenPC-MCP): El Agente Autónomo de Escritorio para ChatGPT
 
 <p align="center">
   <img src="https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(MCP)-FF6B6B?style=for-the-badge&logo=openai&logoColor=white" alt="MCP Protocol" />
@@ -9,26 +9,26 @@
 
 <p align="center">
   <b>Convierte tu ChatGPT Web (<a href="https://chatgpt.com">chatgpt.com</a>) en un verdadero agente autónomo de ingeniería de software para tu ordenador.</b><br>
-  Visión de escritorio en tiempo real, ratón, teclado, terminal PowerShell/Bash, edición quirúrgica de código y <b>memoria persistente estructurada en hojas Markdown modulares</b>.
+  Visión de escritorio en tiempo real, ratón, teclado, terminal PowerShell/Bash, edición quirúrgica de código y <b>memoria persistente estructurada en hojas Markdown modulares por proyecto</b>.
 </p>
 
 ---
 
 ```text
-    ██████╗ ██╗  ██╗ ██████╗ ███████╗████████╗██████╗  ██████╗
-   ██╔════╝ ██║  ██║██╔═══██╗██╔════╝╚══██╔══╝██╔══██╗██╔════╝
-   ██║  ███╗███████║██║   ██║███████╗   ██║   ██████╔╝██║     
-   ██║   ██║██╔══██║██║   ██║╚════██║   ██║   ██╔═══╝ ██║     
-   ╚██████╔╝██║  ██║╚██████╔╝███████║   ██║   ██║     ╚██████╗
-    ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝      ╚═════╝
-          Autonomous Desktop Agent Engine for ChatGPT
+       ██╗███████╗██████╗ ██╗ ██████╗██╗  ██╗ ██████╗ 
+       ██║██╔════╝██╔══██╗██║██╔════╝██║  ██║██╔═══██╗
+       ██║█████╗  ██████╔╝██║██║     ███████║██║   ██║
+  ██   ██║██╔══╝  ██╔══██╗██║██║     ██╔══██║██║   ██║
+  ╚█████╔╝███████╗██║  ██║██║╚██████╗██║  ██║╚██████╔╝
+   ╚════╝ ╚══════╝╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ 
+            Autonomous Desktop Agent Engine for ChatGPT
 ```
 
 ---
 
-## 🌟 ¿Por qué GhostPC?
+## 🌟 ¿Por qué Jericho?
 
-La mayoría de los servidores MCP son simples envoltorios de comandos básicos. **GhostPC** es una suite agéntica completa diseñada para resolver los 3 grandes problemas de la IA en local:
+La mayoría de los servidores MCP son simples envoltorios de comandos básicos. **Jericho** es una suite agéntica completa diseñada para resolver los 3 grandes problemas de la IA en local:
 
 1. **🔒 Cero Puertos Abiertos (Seguridad Total):** Utiliza el *OpenAI Secure MCP Tunnel* oficial. Conexión saliente cifrada TLS sin abrir puertos en tu router ni exponer tu IP pública.
 2. **👁️ Computer Use Real (Visión + Coordenadas):** Capturas de pantalla PNG de alta resolución con **cuadrícula milimétrica superpuesta** para que ChatGPT localice y pulse botones con precisión subpíxel.
@@ -51,13 +51,13 @@ La mayoría de los servidores MCP son simples envoltorios de comandos básicos. 
                                     │
                                     ▼  Conexión Saliente (Sin tocar Firewall)
 ┌────────────────────────────────────────────────────────────────────────┐
-│                      ghostpc daemon (tunnel-client)                    │
+│                      jericho daemon (tunnel-client)                    │
 │                 Panel Local: http://127.0.0.1:8080/ui                  │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
                                     ▼  stdio (JSON-RPC 2.0)
 ┌────────────────────────────────────────────────────────────────────────┐
-│                         GhostPC Core Engine                            │
+│                         Jericho Core Engine                            │
 ├───────────────────────────────────┬────────────────────────────────────┤
 │  👁️ Visión & GUI (Screenshots/DPI) │  ⚡ Terminal PowerShell / Background│
 │  🧠 Motor de Tareas Modulares (.md)│  📁 Edición Quirúrgica de Código   │
@@ -77,8 +77,8 @@ La mayoría de los servidores MCP son simples envoltorios de comandos básicos. 
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/TU_USUARIO/GhostPC.git
-cd GhostPC
+git clone https://github.com/JaviCKP/jericho.git
+cd jericho
 npm install
 ```
 
@@ -88,7 +88,7 @@ En Windows, haz doble clic en **`setup.bat`** (o ejecuta en terminal `npm run se
 
 ```text
 ================================================================
-   🚀 GHOSTPC SUITE - ASISTENTE DE CONFIGURACIÓN RÁPIDA
+   🚀 JERICHO SUITE - ASISTENTE DE CONFIGURACIÓN RÁPIDA
 ================================================================
 1. Introduce tu CONTROL_PLANE_TUNNEL_ID: tunnel_0123456789...
 2. Introduce tu CONTROL_PLANE_API_KEY: sk-proj-...
@@ -108,7 +108,7 @@ En Windows, haz doble clic en **`setup.bat`** (o ejecuta en terminal `npm run se
 
 ## 🧠 El Motor de Tareas Modulares (`.tasks/`)
 
-En lugar de notas gigantescas y desordenadas, GhostPC organiza el trabajo por **proyectos y hojas modulares**:
+En lugar de notas gigantescas y desordenadas, Jericho organiza el trabajo por **proyectos y hojas modulares**:
 
 ```text
 ChatGPT-Workspace/.tasks/
@@ -231,4 +231,4 @@ He actualizado la hoja de contexto marcando como completada la animación.
 
 ## 📄 Licencia
 
-Publicado bajo licencia de código abierto **MIT**. Creado con ❤️ por y para la comunidad de desarrolladores de IA.
+Publicado bajo licencia de código abierto **MIT**. Creado con ❤️ por **JaviCKP**.

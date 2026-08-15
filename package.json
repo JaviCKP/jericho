@@ -1,31 +1,36 @@
 {
-  "name": "chatgpt-pc-mcp",
+  "name": "jericho",
   "version": "1.0.0",
-  "description": "Production-grade Model Context Protocol (MCP) server connecting ChatGPT Web to your local computer with computer use, vision, advanced terminal, filesystem, git, and context checkpoints.",
+  "description": "Jericho: Production-grade Model Context Protocol (MCP) Autonomous Agent Suite connecting ChatGPT Web to your PC with Computer Use, Vision, Advanced Terminal, Surgical Code Editing, and Modular Task Memory.",
   "main": "src/index.js",
   "bin": {
-    "chatgpt-pc-mcp": "src/index.js"
+    "jericho": "src/index.js"
   },
   "scripts": {
     "start": "node src/index.js",
     "setup": "node scripts/setup.js",
     "download-binaries": "node scripts/download-binaries.js",
     "doctor": "node scripts/doctor.js",
-    "test": "node tests/test-modules.js"
+    "test": "node tests/test-server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaviCKP/jericho.git"
   },
   "keywords": [
+    "jericho",
     "mcp",
     "model-context-protocol",
     "chatgpt",
     "chatgpt-web",
     "openai-tunnel",
     "computer-use",
-    "automation",
-    "desktop-control",
+    "desktop-automation",
     "vision",
-    "context-checkpoints"
+    "task-engine",
+    "context-memory"
   ],
-  "author": "Antigravity Open Source Community",
+  "author": "JaviCKP",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
