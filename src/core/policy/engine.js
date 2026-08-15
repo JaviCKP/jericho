@@ -166,13 +166,13 @@ class PolicyEngine {
     let approval = 'not_required';
     let grant = null;
     if (effective >= this.approvalAt) {
-      if (!session.user_id || !session.project_id) {
-        throw new GhostError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
-      }
       grant = this.findStandingGrant(tool, effective, effects);
       if (grant) {
         approval = 'standing_grant';
       } else if (approvalId) {
+        if (!session.user_id || !session.project_id) {
+          throw new GhostError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
+        }
         this.approvals.consume(approvalId, tool, args, {
           session_id: session.session_id,
           user_id: session.user_id,
@@ -180,6 +180,9 @@ class PolicyEngine {
         }); // lanza si no es válida
         approval = `explicit:${approvalId}`;
       } else {
+        if (!session.user_id || !session.project_id) {
+          throw new GhostError(CODES.POLICY_DENIED, 'Las operaciones que requieren aprobación necesitan sesión, usuario y proyecto autenticados.');
+        }
         const req = this.approvals.request({
           tool,
           args,

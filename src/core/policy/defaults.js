@@ -18,8 +18,8 @@ const DEFAULT_POLICY = {
   /** Riesgo máximo permitido en ningún caso. R4 exige activarlo explícitamente. */
   max_risk: 'R3',
 
-  /** Sesiones anónimas (sin session_id explícito) quedan limitadas. */
-  anonymous_max_risk: 'R1',
+  /** Sesiones del túnel autenticado de ChatGPT. */
+  anonymous_max_risk: 'R3',
 
   approval: {
     required_at_or_above: 'R2',
