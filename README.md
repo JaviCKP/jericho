@@ -2,16 +2,8 @@
   <img src="docs/assets/hero_banner.jpg" alt="JERICHO — FROM CHAT TO AGENT" width="100%" />
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Protocol-Model%20Context%20Protocol%20(MCP)%202025--11--25-FF6B6B?style=for-the-badge&logo=openai&logoColor=white" alt="MCP Protocol" />
-  <img src="https://img.shields.io/badge/Security-Zero--Trust%20Chokepoint-10A37F?style=for-the-badge&logo=auth0&logoColor=white" alt="Security" />
-  <img src="https://img.shields.io/badge/Tests-430%2B%20Passing%20(100%25)-blue?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" />
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4D4D4D?style=for-the-badge&logo=windows&logoColor=white" alt="Platform" />
-  <img src="https://img.shields.io/badge/License-MIT-007ACC?style=for-the-badge" alt="License" />
-</p>
-
 <h3 align="center">
-  <b>Turn ChatGPT Web (<a href="https://chatgpt.com">chatgpt.com</a>) into a full-fledged autonomous software engineering agent for your computer.</b>
+  <b>Turn the unlimited web version of ChatGPT (<a href="https://chatgpt.com">chatgpt.com</a>) into a powerful, autonomous software engineering agent for your local computer.</b>
 </h3>
 
 <p align="center">
@@ -31,30 +23,29 @@
 - [🌟 Why Jericho?](#-why-jericho)
 - [🏛️ System Architecture](#️-system-architecture)
 - [⚡ Core Technical Pillars](#-core-technical-pillars)
-- [🛠️ The 13 Orthogonal Tools](#️-the-13-orthogonal-tools)
+- [🛠️ The Tool Surface](#️-the-tool-surface)
 - [🚀 Quickstart in 60 Seconds](#-quickstart-in-60-seconds)
 - [💬 Real-World ChatGPT Web Workflows](#-real-world-chatgpt-web-workflows)
 - [🎛️ Human Operator Console (Human-in-the-Loop)](#️-human-operator-console-human-in-the-loop)
 - [🔒 Zero-Trust Security & Threat Mitigation](#-zero-trust-security--threat-mitigation)
-- [🤖 The Mascot: Archaeologist](#-the-mascot-archaeologist)
-- [🧪 Automated Test Suite (430+ Tests)](#-automated-test-suite-430-tests)
 - [📚 Deep-Dive Technical Documentation](#-deep-dive-technical-documentation)
-- [📄 License & Credits](#-license--credits)
+- [📄 License](#-license)
 
 ---
 
 ## 🌟 Why Jericho?
 
-Most existing MCP servers are superficial command wrappers that execute arbitrary code with no containment, consume thousands of precious context tokens, and suffer from total amnesia between chats.
+While web-based AI models like ChatGPT Web have unlimited reasoning capabilities, they are isolated in the cloud without direct access to your local machine. Most existing local tools are either unsafe scripts with unrestricted command access or superficial wrappers that suffer from total amnesia between chats.
 
-**Jericho** is an enterprise-grade agent runtime built from the ground up on **Zero-Trust principles**:
+**Jericho** bridges this gap by enabling **ChatGPT Web** to act as a secure, autonomous agent directly on your PC:
 
-1. **🔒 Zero Open Ports (Outbound TLS Tunnel):** Connects to ChatGPT Web via OpenAI's official secure tunnel protocol. No public IP exposure, no port forwarding, no firewall reconfigurations.
-2. **🛡️ Unified Chokepoint Engine:** Every single tool call must clear a centralized `PolicyEngine` before touching your OS. Every action is formally risk-scored from **R0** (read-only) to **R4** (high impact).
-3. **↩️ Surgical Code Patching with Atomic Rollback:** Unified diff application with SHA-256 pre-validation, `dry_run` simulation, and instant `rollback_token` recovery to undo breaking changes cleanly.
-4. **🧠 Concurrent Structured Memory (No Amnesia):** Work items versioned with *Compare-and-Swap* (`expected_revision`), automatic disk/git staleness detection, and mandatory test evidence verification before closing tasks.
-5. **👁️ Deterministic Computer Use:** High-resolution screenshots with millimeter coordinate overlays, native multi-monitor capture, and geometry preconditioning to prevent blind mouse clicks.
-6. **👤 Out-of-Band Human Approvals:** High-risk actions (R3/R4) require physical operator approval via terminal (`npm run approve`). The AI model cannot self-authorize destructive actions.
+1. **🚀 Unleash ChatGPT Web on Your Local PC:** Turn the unlimited web version of ChatGPT into an active local pair programmer and OS operator that reads your projects, writes and edits code, runs test suites, and monitors system processes.
+2. **🔒 Zero Open Ports (Outbound-Only TLS Tunnel):** Connects to ChatGPT Web via OpenAI's official secure tunnel protocol. No public IP exposure, no port forwarding, and no firewall reconfigurations required.
+3. **🛡️ Unified Zero-Trust Chokepoint Engine:** Every single tool call must clear a centralized `PolicyEngine` before touching your operating system. Every action is formally risk-scored from **R0** (read-only) to **R4** (high impact).
+4. **↩️ Surgical Code Patching with Atomic Rollback:** Unified diff application with SHA-256 pre-validation, `dry_run` simulation, and instant `rollback_token` recovery to immediately undo breaking changes.
+5. **🧠 Concurrent Structured Memory (No Amnesia):** Work items versioned with *Compare-and-Swap* (`expected_revision`), automatic disk and git staleness detection, and mandatory verification evidence before closing tasks.
+6. **👁️ Deterministic Computer Use:** High-resolution window observation, coordinate mapping, and geometry preconditioning to prevent blind mouse clicks or misdirected keyboard actions.
+7. **👤 Out-of-Band Human Approvals:** High-risk actions (destructive modifications, directory deletion) require physical operator authorization via terminal (`npm run approve`). The AI model cannot self-authorize destructive actions.
 
 ---
 
@@ -105,8 +96,8 @@ Most existing MCP servers are superficial command wrappers that execute arbitrar
 
 ## ⚡ Core Technical Pillars
 
-### 1. 🧱 Military-Grade Filesystem Jail (`paths.js`)
-* **Strict Root Confinement:** The agent is bounded to authorized workspace roots (`JERICHO_ROOTS` or `CHATGPT_WORKSPACE`).
+### 1. 🧱 Strict Filesystem Jailing (`paths.js`)
+* **Authorized Root Confinement:** The agent is bounded to authorized workspace roots (`workspace`, `downloads`, `desktop`, `documents`).
 * **OS Exploit Immunity:** Proactively rejects *Path Traversal* (`../`), NTFS Alternate Data Streams (`file:stream`), MS-DOS reserved device names (`CON`, `PRN`, `AUX`, `NUL`), 8.3 short-name aliases (`PROGRA~1`), UNC network paths (`\\evil-server\`), and symlink/junction breakout attacks via canonical `realpath` verification.
 * **Non-Negotiable Secret Exclusions:** Hardcoded blocks for `.env*`, `.ssh/`, `.aws/`, `.gnupg/`, `id_rsa`, `.npmrc`, `.git-credentials`, and cryptographic certificates (`*.pem`, `*.key`) — even if located inside authorized workspaces.
 
@@ -126,9 +117,9 @@ Most existing MCP servers are superficial command wrappers that execute arbitrar
 
 ---
 
-## 🛠️ The 13 Orthogonal Tools
+## 🛠️ The Tool Surface
 
-Rather than bloating context windows with 40+ noisy tools, Jericho groups capabilities into **13 deep, orthogonal tools** across 5 distinct security profiles:
+Jericho groups capabilities into clean, orthogonal tools across distinct security profiles:
 
 | Profile | Tool Name | Risk Level | Capability & Description |
 | :--- | :--- | :---: | :--- |
@@ -140,11 +131,14 @@ Rather than bloating context windows with 40+ noisy tools, Jericho groups capabi
 | **`core_read`** | `memory.resume` | R0/R1 | Loads task sessions with automatic staleness detection. |
 | **`development`**| `workspace.apply_patch` | R1/R3 | Surgical diff patching with dry-run mode and rollback tokens. |
 | **`development`**| `workspace.rollback` | R1 | Atomically reverts previous patches using a `rollback_token`. |
-| **`development`**| `terminal.exec` | R1/R4 | Safe process execution with strict allowlists (`node`, `git`, `npm`). |
+| **`development`**| `terminal.exec` | R1/R4 | Safe process execution with strict allowlists (`node`, `git`, `npm`, `python`, `powershell`). |
 | **`development`**| `verify.run` | R1 | Runs isolated test suites and linters with resource limits. |
 | **`development`**| `git.commit` | R1 | Creates atomic git commits with explicit file staging. |
 | **`development`**| `memory.checkpoint`| R1 | Saves structured work items and validates completion evidence. |
 | **`development`**| `memory.propose_rule`| R1 | Proposes global engineering conventions requiring human approval. |
+| **`desktop`**    | `desktop.observe` | R2 | Lists windows and captures specific regions with geometry. |
+| **`desktop`**    | `desktop.element_action` | R2 | Clicks, drags, and scrolls relative to verified window bounds. |
+| **`desktop`**    | `desktop.keyboard` | R3 | Types text or presses hotkeys with secret leak prevention. |
 
 ---
 
@@ -165,14 +159,14 @@ npm run setup
 ```
 *(On Windows, you can simply double-click `setup.bat`)*
 
-The wizard prompts for your OpenAI `CONTROL_PLANE_TUNNEL_ID` and `CONTROL_PLANE_API_KEY`, downloading official binaries and running health diagnostics via `npm run doctor`.
+The wizard prompts for your OpenAI `CONTROL_PLANE_TUNNEL_ID` and `CONTROL_PLANE_API_KEY`, downloading official binaries and running health diagnostics.
 
 ### 3. Launch Jericho
 
 ```bash
 npm start
 ```
-*(On Windows, you can double-click `scripts/start-silent.vbs` to run 100% invisibly in the background)*.
+*(On Windows, you can double-click `start.bat`)*.
 
 ### 4. Connect in ChatGPT Web
 
@@ -210,7 +204,7 @@ User: Add localStorage caching to the cart store and run the unit tests.
 ChatGPT: 
 1. [Calls workspace.apply_patch(dry_run=true)] -> Simulation passed.
 2. [Calls workspace.apply_patch] -> Applied to 'src/store/cart.js' (Token: rb_4a71b2).
-3. [Calls verify.run(command="npm test")] -> Tests failed due to a syntax bug.
+3. [Calls verify.run(check="test", cwd="ecommerce-platform")] -> Tests failed due to a syntax bug.
 4. [Calls workspace.rollback(rollback_token="rb_4a71b2")] -> Restored original file state.
 5. Fixed the syntax error and reapplied the patch. All unit tests PASS!
 ```
@@ -255,9 +249,6 @@ npm run rules -- reject prop_123      # Reject proposal
 # 3. Cryptographic Audit Log Verification
 npm run audit -- verify               # Validates hash-chain integrity
 npm run audit -- export               # Exports tamper-evident audit journal
-
-# 4. Migrate v1 Markdown tasks to v2 Structured Memory
-npm run migrate -- --apply            # Migrates legacy tasks cleanly
 ```
 
 ---
@@ -275,39 +266,6 @@ npm run migrate -- --apply            # Migrates legacy tasks cleanly
 
 ---
 
-## 🤖 The Mascot: Archaeologist
-
-<p align="center">
-  <img src="docs/assets/mascot.jpg" alt="Jericho — The Technological Archaeologist" width="340px" />
-</p>
-
-Meet **The Archaeologist**, Jericho's official mascot: an adventurous digital explorer dedicated to unearthing codebase context, inspecting deep systems, and building robust software alongside you.
-
----
-
-## 🧪 Automated Test Suite (430+ Tests)
-
-Jericho includes an exhaustive test battery validating security, protocol compliance, and agentic workflows on every commit:
-
-```bash
-# Run the entire test suite (Security + Contracts + Evals)
-npm test
-
-# Run Zero-Trust security test suites only
-npm run test:security
-
-# Run MCP schema contract and protocol conformance tests
-npm run test:contract
-
-# Run End-to-End agent evaluation benchmarks
-npm run test:evals
-
-# Run fast lifecycle smoke test
-npm run smoke
-```
-
----
-
 ## 📚 Deep-Dive Technical Documentation
 
 For in-depth architectural and security analysis, explore the repository documentation:
@@ -320,8 +278,8 @@ For in-depth architectural and security analysis, explore the repository documen
 
 ---
 
-## 📄 License & Credits
+## 📄 License
 
 Distributed under the open-source **MIT License**.
 
-Designed and built with ❤️ by **[JaviCKP](https://github.com/JaviCKP)**.
+Developed by **[JaviCKP](https://github.com/JaviCKP)**.

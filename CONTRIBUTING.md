@@ -1,51 +1,92 @@
-# 🤝 Contribuir a OpenPC-MCP
+# Contributing to Jericho
 
-¡Gracias por tu interés en contribuir a OpenPC-MCP! Este proyecto es de código abierto y agradece aportaciones de desarrolladores de todo el mundo.
+Thank you for your interest in contributing to **Jericho**! We welcome contributions from developers worldwide to make local agentic computing safer, faster, and more capable.
 
 ---
 
-## 🛠️ Cómo añadir nuevas herramientas MCP
+## 🏛️ Development Philosophy & Security First
 
-1. Selecciona el módulo adecuado en `src/modules/` (o crea un nuevo archivo en `src/modules/` si es una nueva categoría temática).
-2. Define el esquema de la herramienta en el array de herramientas:
+Jericho is built on a **Zero-Trust Chokepoint Architecture**. Any new feature or tool must adhere to these core principles:
+
+1. **Deterministic Execution:** No arbitrary shell strings. Always pass explicit binary executables and argument arrays.
+2. **Path Confinement:** Every filesystem access must be validated through `src/core/workspace/paths.js` against authorized workspace roots.
+3. **Secret Isolation:** Never expose credentials, API keys, or `.env` variables to tool outputs. Always route through `src/core/redact.js`.
+4. **Structured Output:** Every tool must define a strict `inputSchema` (`additionalProperties: false`) and `outputSchema` adhering to MCP specifications.
+
+---
+
+## 🛠️ Adding New MCP Tools
+
+1. **Define the Tool in the Catalog:**
+   Add your tool's schema, risk level, and metadata in `src/tools/catalog.js`:
    ```javascript
    {
-     name: 'mi_nueva_herramienta',
-     description: 'Descripción clara de qué hace la herramienta y qué devuelve.',
+     name: 'category.tool_name',
+     version: '2.0.0',
+     profile: 'development',
+     risk: RISK.R1,
+     timeoutMs: 30_000,
+     description: 'Precise explanation of what the tool accomplishes.',
+     annotations: {
+       title: 'Human Friendly Title',
+       readOnlyHint: false,
+       destructiveHint: false,
+       idempotentHint: true,
+       openWorldHint: false,
+     },
      inputSchema: {
        type: 'object',
        properties: {
-         miParametro: { type: 'string', description: 'Descripción del parámetro' }
+         param: { type: 'string', description: 'Parameter description.' },
+         ...SESSION_PROPS,
        },
-       required: ['miParametro']
-     }
+       required: ['param'],
+       additionalProperties: false,
+     },
+     outputSchema: out({
+       result: { type: 'string' },
+     }),
    }
    ```
-3. Implementa la función handler correspondiente en el `switch (name)` del módulo.
-4. Asegúrate de registrar el nuevo módulo en `src/index.js`.
-5. Ejecuta las pruebas unitarias:
-   ```bash
-   npm test
-   ```
-6. Actualiza la documentación en `docs/TOOLS_REFERENCE.md`.
+
+2. **Implement the Tool Handler:**
+   Create or update the implementation in `src/tools/impl/` ensuring it delegates actions to `ctx.runtime` (Runner, Roots, Network Guard, or Memory Store).
+
+3. **Register the Implementation:**
+   Export the handler in `src/tools/index.js`.
+
+4. **Add Unit & Security Tests:**
+   Add comprehensive tests in `tests/contract/` and `tests/security/`.
 
 ---
 
-## 🧪 Ejecutar Tests
+## 🧪 Running the Test Suite
 
-Para validar que todas las herramientas y el servidor responden según el protocolo MCP:
+Before submitting a pull request, ensure all tests pass:
 
 ```bash
-npm test
+# Run the complete test suite
+node tests/run-all.js
+
+# Run end-to-end evaluation scenarios
+node tests/evals/index.js
+
+# Run fast smoke test
+npm run smoke
 ```
 
 ---
 
-## 🚀 Flujo de Pull Requests
+## 🚀 Pull Request Workflow
 
-1. Haz un Fork del repositorio.
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-herramienta`).
-3. Realiza tus cambios y verifica que `npm test` pase sin errores.
-4. Haz commit de tus cambios (`git commit -m 'feat: añadir herramienta de audio'`).
-5. Sube tu rama (`git push origin feature/nueva-herramienta`).
-6. Abre un Pull Request describiendo tu propuesta.
+1. Fork the repository on GitHub.
+2. Create a feature branch (`git checkout -b feat/my-new-feature`).
+3. Commit your changes with clear, semantic commit messages (`git commit -m 'feat(exec): add support for rustc verification'`).
+4. Push your branch (`git push origin feat/my-new-feature`).
+5. Open a Pull Request with a description of your changes and test results.
+
+---
+
+## 📄 Code of Conduct
+
+Be respectful, constructive, and collaborative. We are building the future of autonomous agent runtime security together.
