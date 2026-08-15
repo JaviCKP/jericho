@@ -210,7 +210,21 @@ class Roots {
   }
 
   byName(name) {
-    return this.roots.find((r) => r.name === name) || null;
+    if (!name) return null;
+    const n = String(name).toLowerCase();
+    if (n === 'descargas' || n === 'downloads') {
+      const match = this.roots.find((r) => r.name === 'downloads' || r.name === 'descargas');
+      if (match) return match;
+    }
+    if (n === 'escritorio' || n === 'desktop') {
+      const match = this.roots.find((r) => r.name === 'desktop' || r.name === 'escritorio');
+      if (match) return match;
+    }
+    if (n === 'documentos' || n === 'documents') {
+      const match = this.roots.find((r) => r.name === 'documents' || r.name === 'documentos');
+      if (match) return match;
+    }
+    return this.roots.find((r) => r.name === name || r.name.toLowerCase() === n) || null;
   }
 
   /** Devuelve la raíz que contiene la ruta canónica, o null. */
@@ -356,9 +370,18 @@ function defaultRootDefinitions(env = process.env) {
   }
   const ws = env.CHATGPT_WORKSPACE || path.join(home, 'ChatGPT-Workspace');
   const desktop = path.join(home, 'Desktop');
+  const downloads = path.join(home, 'Downloads');
+  const documents = path.join(home, 'Documents');
+
   const roots = [{ name: 'workspace', path: ws, write: true }];
   if (fs.existsSync(desktop)) {
     roots.push({ name: 'desktop', path: desktop, write: true });
+  }
+  if (fs.existsSync(downloads)) {
+    roots.push({ name: 'downloads', path: downloads, write: true });
+  }
+  if (fs.existsSync(documents)) {
+    roots.push({ name: 'documents', path: documents, write: true });
   }
   return roots;
 }
