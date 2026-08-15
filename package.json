@@ -11,7 +11,15 @@
     "setup": "node scripts/setup.js",
     "download-binaries": "node scripts/download-binaries.js",
     "doctor": "node scripts/doctor.js",
-    "test": "node tests/audit-all-tools.js"
+    "test": "node tests/run-all.js",
+    "test:security": "node tests/security/index.js",
+    "test:contract": "node tests/contract/index.js",
+    "test:evals": "node tests/evals/index.js",
+    "smoke": "node tests/smoke.js",
+    "approve": "node scripts/operator.js approve",
+    "rules": "node scripts/operator.js rules",
+    "migrate": "node scripts/operator.js migrate",
+    "audit": "node scripts/operator.js audit"
   },
   "repository": {
     "type": "git",
